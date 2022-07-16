@@ -1,0 +1,53 @@
+# Anchor
+.anchor
+**/*.rs.bk
+
+# Solana
+test-ledger
+
+# Generated files
+client-sdks/ts/src/gen
+client-sdks/ts/docs
+
+# Build output and cache files
+target
+dist
+build
+.cache
+tmp
+
+# Dependencies
+node_modules
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variables
+.env
+.env.prod*
+
+# Editors
+
+## VS Code
+.vscode/
+.history/
+
+## JetBrains
+.idea/
+.idea_modules/
+*.iml
+*.ipr
+*.iws
+
+# OS
+
+## Linux
+*~
+.Trash-*
+
+## MacOS
+.DS_Store
+._*
