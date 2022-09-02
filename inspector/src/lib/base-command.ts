@@ -72,7 +72,11 @@ export default abstract class BaseCommand extends Command {
   }
 
   async init(): Promise<void> {
-    const { flags } = await this.parse();
+    const { flags: flagsOutput } = await this.parse();
+
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    const flags = flagsOutput as Record<string, string>;
 
     this.isDebugEnabled = !!flags.debug;
     this.isJSONEnabled = !!flags.json;
