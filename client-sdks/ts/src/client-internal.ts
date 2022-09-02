@@ -47,7 +47,7 @@ export class SuperstreamClientInternal implements SuperstreamClient {
     const endpoint = cluster instanceof URL ? cluster.toString() : web3.clusterApiUrl(cluster);
     const connection = new web3.Connection(endpoint, "confirmed");
     this.provider = new AnchorProvider(connection, wallet || NO_OP_WALLET, opts);
-    this.program = new Program<Superstream>(idl as Superstream, SUPERSTREAM_PROGRAM_ID, this.provider);
+    this.program = new Program<Superstream>(idl as unknown as Superstream, SUPERSTREAM_PROGRAM_ID, this.provider);
   }
 
   private readonly checkForValidWallet = (): void => {
@@ -95,6 +95,11 @@ export class SuperstreamClientInternal implements SuperstreamClient {
   };
 
   readonly getStream = async (publicKey: web3.PublicKey): Promise<Stream> => {
+    const streamAccount: StreamAccount = await this.program.account.stream.fetch(publicKey);
+    return Stream.fromStreamAccount(this, publicKey, streamAccount);
+  };
+
+  readonly getStream = async (publicKey: web3.PublicKey): Promise<Activity> => {
     const streamAccount: StreamAccount = await this.program.account.stream.fetch(publicKey);
     return Stream.fromStreamAccount(this, publicKey, streamAccount);
   };

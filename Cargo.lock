@@ -1281,25 +1281,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "superstream"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68978315fab38e62267faeef8b75de1514f31b681ed7357a0ec728926e1531d6"
-dependencies = [
- "anchor-lang",
- "anchor-spl",
-]
-
-[[package]]
-name = "superstream-cpi-example"
-version = "0.2.0"
-dependencies = [
- "anchor-lang",
- "anchor-spl",
- "superstream 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "syn"
 version = "1.0.98"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -25,12 +25,15 @@ import {
 import { Superstream } from "../target/types/superstream";
 
 const STREAM_ACCOUNT_SEED = "stream";
+const ACTIVITY_ACCOUNT_SEED = "activity";
 
 describe("superstream", () => {
   const provider = AnchorProvider.env();
   setProvider(provider);
 
   const program = workspace.Superstream as Program<Superstream>;
+  console.log("program id is "+program.programId)
+
   const sender = provider.wallet;
 
   const tokenProgram = Spl.token(provider);
@@ -39,13 +42,24 @@ describe("superstream", () => {
   };
 
   let mint = web3.PublicKey.default;
+  let reward_mint = web3.PublicKey.default;
+  let opt_reward_mint = web3.PublicKey.default;
   let senderToken = web3.PublicKey.default;
   let senderTokenAmount = new BN(1e10);
 
   it("Initializes test setup", async () => {
+    console.log("111111111 program id is "+program.programId)
     mint = await createMint(provider);
+    reward_mint = await createMint(provider);
+    opt_reward_mint = await createMint(provider);
     senderToken = await createAssociatedTokenAccount(provider, mint, sender.publicKey);
     await mintTo(provider, mint, senderToken, Number(senderTokenAmount));
+  });
+  
+  program.addEventListener("CreateStreamEvent", (event, slot) => {
+    console.log("CreateStreamEvent stream: " + event["stream"])
+    console.log("CreateStreamEvent amount: " + event["amount"])
+    console.log("CreateStreamEvent slot: " + slot)
   });
 
   it("Creates a prepaid stream", async () => {
@@ -56,11 +70,35 @@ describe("superstream", () => {
     const name = "s1";
     const [streamPublicKey] = getStreamPublicKey(program.programId, seed, mint, name);
     const escrowToken = await createAssociatedTokenAccount(provider, mint, streamPublicKey);
+    const [activityPublicKey] = getActivityPublicKey(program.programId, seed, mint, name);
     const startAt = Math.floor(Date.now() / 1000);
     const secsInAYear = 365 * 24 * 60 * 60;
     const endsAt = startAt + secsInAYear;
+    let senderTokenAccount = await fetchTokenAccount(senderToken);
+    var previousAmount = senderTokenAccount.amount
+    console.log("senderTokenAccount.amount: "+senderTokenAccount.amount)
 
-    await program.methods
+    var sig = await program.methods
+    .createActivity(
+      seed,
+      name,
+      new BN(0),
+      new BN(endsAt),
+      new BN(100000000),
+      new BN(1000),
+    )
+    .accounts({
+      activity: activityPublicKey,
+      creator: sender.publicKey,
+      stakeMint: mint,
+      rewardMint:reward_mint,
+      optRewardMint:opt_reward_mint,
+      systemProgram: web3.SystemProgram.programId,
+    })
+    .rpc();
+  console.log("createActivity sig is "+sig)
+
+    var sig = await program.methods
       .createPrepaid(
         seed,
         name,
@@ -91,13 +129,30 @@ describe("superstream", () => {
         systemProgram: web3.SystemProgram.programId,
       })
       .rpc();
-
-    let senderTokenAccount = await fetchTokenAccount(senderToken);
-    approximatelyEqualBN(senderTokenAccount.amount, new BN(1e10 - 1000 - secsInAYear * 10));
+    console.log("createPrepaid sig is "+sig)
+    console.log("startAt is "+startAt + "  endsAt is "+endsAt)
+//  await sleep(49000);
+//  await  provider.connection.getTransaction(sig, new web3.GetTransactionConfig{}).then((value) => {
+//       console.log("txObj: "+value);
+//       console.log("txObj: "+value?.meta?.logMessages);
+//       var logs = value?.meta?.logMessages
+//       logs.forEach((element,i) => {
+//         console.log("log "+ i + " : "+element)
+//       });
+//     });
+    await sleep(4000);
+    const streamAccount = await program.account.stream.fetch(streamPublicKey);
+    console.log("---streamAccount.bump: "+ streamAccount.bump+" initialAmount: "+streamAccount.initialAmount+ " endsAt: "+ streamAccount.endsAt);
+    const activityAccount = await program.account.activity.fetch(activityPublicKey);
+    console.log("---activityAccount.bump: "+ activityAccount.bump+" minAmount: "+activityAccount.minAmount+ " endsAt: "+ streamAccount.endsAt);
+    senderTokenAccount = await fetchTokenAccount(senderToken);
+    senderTokenAmount = senderTokenAccount.amount
+    console.log("updated senderTokenAmount after createPrepaid is "+senderTokenAmount)
+    approximatelyEqualBN(senderTokenAccount.amount, new BN(previousAmount - 1000 - secsInAYear * 10));
     let recipientTokenAccount = await fetchTokenAccount(recipientToken);
     strictEqualBN(recipientTokenAccount.amount, new BN(0));
 
-    await sleep(4000);
+    // await sleep(4000);
     const diffOnWithdraw = Math.floor(Date.now() / 1000) - startAt;
 
     await program.methods
@@ -111,13 +166,11 @@ describe("superstream", () => {
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .rpc();
-
-    senderTokenAccount = await fetchTokenAccount(senderToken);
-    approximatelyEqualBN(senderTokenAccount.amount, new BN(1e10 - 1000 - secsInAYear * 10));
+      
     recipientTokenAccount = await fetchTokenAccount(recipientToken);
     approximatelyEqualBN(recipientTokenAccount.amount, new BN(1000 + diffOnWithdraw * 10));
 
-    await program.methods
+    sig = await program.methods
       .cancel(seed, name, recipient.publicKey)
       .accounts({
         stream: streamPublicKey,
@@ -131,10 +184,13 @@ describe("superstream", () => {
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .rpc();
+    console.log("cancel sig is "+sig)
 
     const diffOnCancel = Math.floor(Date.now() / 1000) - startAt;
 
     senderTokenAccount = await fetchTokenAccount(senderToken);
+    senderTokenAmount = senderTokenAccount.amount
+    console.log("updated senderTokenAmount after cancel is "+senderTokenAmount)
     approximatelyEqualBN(senderTokenAccount.amount, new BN(1e10 - 1000 - diffOnCancel * 10));
     recipientTokenAccount = await fetchTokenAccount(recipientToken);
     approximatelyEqualBN(recipientTokenAccount.amount, new BN(1000 + diffOnCancel * 10));
@@ -154,7 +210,8 @@ describe("superstream", () => {
       .rpc();
 
     senderTokenAccount = await fetchTokenAccount(senderToken);
-    senderTokenAmount = senderTokenAccount.amount;
+    senderTokenAmount = senderTokenAccount.amount
+    console.log("updated senderTokenAmount after withdraw is "+senderTokenAmount)
     approximatelyEqualBN(senderTokenAmount, new BN(1e10 - 1000 - diffOnCancel * 10));
     recipientTokenAccount = await fetchTokenAccount(recipientToken);
     approximatelyEqualBN(recipientTokenAccount.amount, new BN(1000 + diffOnCancel * 10));
@@ -301,6 +358,7 @@ describe("superstream", () => {
       .rpc();
 
     senderTokenAccount = await fetchTokenAccount(senderToken);
+    console.log("2222222 senderTokenAccount.amount: "+senderTokenAccount.amount)
     strictEqualBN(senderTokenAccount.amount, senderTokenAmount.sub(new BN(1e7)));
     recipientTokenAccount = await fetchTokenAccount(recipientToken);
     approximatelyEqualBN(recipientTokenAccount.amount, new BN(1000 + diffOnWithdraw * 10));
@@ -394,6 +452,18 @@ function getStreamPublicKey(
 ): [web3.PublicKey, number] {
   return anchorUtils.publicKey.findProgramAddressSync(
     [Buffer.from(STREAM_ACCOUNT_SEED), seed.toBuffer("le", 8), mint.toBuffer(), Buffer.from(name)],
+    programId,
+  );
+}
+
+function getActivityPublicKey(
+  programId: web3.PublicKey,
+  seed: BN,
+  mint: web3.PublicKey,
+  name: string,
+): [web3.PublicKey, number] {
+  return anchorUtils.publicKey.findProgramAddressSync(
+    [Buffer.from(ACTIVITY_ACCOUNT_SEED), seed.toBuffer("le", 8), mint.toBuffer(), Buffer.from(name)],
     programId,
   );
 }

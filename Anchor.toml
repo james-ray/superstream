@@ -2,7 +2,7 @@
 seeds = false
 
 [programs.localnet]
-superstream = "EVAwWziymdW9hRxZR6TsSKZjisiyUsthF51tHCAE4moB"
+superstream = "89XSrErdZFx8MpyohHFEievS7qqHDn9bZh33tV4xbz3K"
 
 [registry]
 url = "https://anchor.projectserum.com"

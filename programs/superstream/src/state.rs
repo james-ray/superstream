@@ -24,6 +24,113 @@ pub const MAX_STREAM_NAME_LENGTH: usize = 100;
 /// in case the stream becomes insolvent. This is done to make sure users keep topping up their streams on time.
 pub const DEPOSIT_AMOUNT_PERIOD_IN_SECS: u64 = 8 * 60 * 60; // 8 hrs
 
+#[account]
+#[derive(Debug, PartialEq, Eq)]
+pub struct Activity {
+    /// If true, the stream is prepaid - all the required amount needs to be deposited on creation. Prepaid streams
+    /// cannot have unlimited lifetime.
+    pub is_active: bool,
+
+    /// creator address.
+    pub creator: Pubkey,
+    /// SPL stake token mint address.
+    pub stake_mint: Pubkey,
+    /// SPL reward token mint address.
+    pub reward_mint: Pubkey,
+    /// Recipient address.
+    pub opt_reward_mint: Pubkey,
+
+    /// Time at which the stream was created.
+    pub created_at: u64,
+    /// Start time of the stream.
+    ///
+    /// INVARIANT: >= created_at
+    pub starts_at: u64,
+    /// End time of the stream. If the stream is unbounded, this can be 0 to indicate no end time.
+    ///
+    /// INVARIANT: prepaid: >= starts_at
+    /// INVARIANT: unbounded: == 0 || >= starts_at
+    pub ends_at: u64,
+
+    pub duration: u64,
+
+    pub min_amount: u64,
+
+    /// Seed of the stream PDA. It's upto the client how they choose the seed. Each tuple (seed, mint, name) corresponds
+    /// to a unique stream.
+    pub seed: u64,
+    /// The PDA bump.
+    pub bump: u8,
+
+    /// Name of the stream. Should be unique for a particular set of (seed, mint).
+    ///
+    /// INVARIANT: Length <= 100 unicode chars or 400 bytes
+    pub name: String,
+}
+
+impl Activity {
+    /// Total size of a Stream account excluding space taken up by the name
+    const BASE_LENGTH: usize = ANCHOR_DISCRIMINATOR_LENGTH
+        + 1 * BOOL_LENGTH       // is_active - 9
+        + 4 * PUBLIC_KEY_LENGTH // creator, stake_mint, reward_mint, opt_reward_mint - 137
+        + 4 * U64_LENGTH        // created_at, starts_at, ends_at, duration - 169
+        + 1 * U64_LENGTH        // min_amount - 177
+        + 1 * U64_LENGTH        // seed - 185
+        + 1 * U8_LENGTH         // bump - 186
+    ;
+
+    pub fn space(name: &str) -> usize {
+        Self::BASE_LENGTH + STRING_LENGTH_PREFIX + name.len()
+    }
+
+    pub fn initialize(
+        &mut self,
+        is_active: bool,
+        creator: Pubkey,
+        stake_mint: Pubkey,
+        reward_mint: Pubkey,
+        opt_reward_mint: Pubkey,
+        starts_at: u64,
+        ends_at: u64,
+        duration: u64,
+        min_amount: u64,
+        seed: u64,
+        bump: u8,
+        name: String,
+    ) -> Result<()> {
+        require!(name.len() >= MIN_STREAM_NAME_LENGTH, StreamError::StreamNameTooShort);
+        require!(name.len() <= MAX_STREAM_NAME_LENGTH, StreamError::StreamNameTooLong);
+        require!(is_active == true,StreamError::ZeroFlowInterval);
+
+        let at = get_current_timestamp()?;
+        let starts_at = if starts_at < at { at } else { starts_at };
+
+        require!(ends_at >= starts_at,
+            StreamError::InvalidEndsAt,
+        );
+
+        self.is_active = is_active;
+        self.creator = creator;
+        self.stake_mint = stake_mint;
+        self.reward_mint = reward_mint;
+        self.opt_reward_mint = opt_reward_mint;
+        self.created_at = at;
+        self.starts_at = starts_at;
+        self.ends_at = ends_at;
+        self.duration = duration;
+        self.min_amount = min_amount;
+        self.seed = seed;
+        self.bump = bump;
+        self.name = name;
+
+        require!(
+            self.min_amount > 0 ,
+            StreamError::ZeroLifetimeAmount
+        );
+        Ok(())
+    }
+}
+
 /// A payment stream with support for SPL tokens, prepaid and limited upfront payment, unlimited lifetime, cliffs and
 /// cancellations.
 ///
@@ -267,6 +374,7 @@ impl Stream {
 
     /// Calculate the amount of prepaid needed for a prepaid stream. This is called when creating the stream.
     pub fn get_prepaid_amount_needed(&self) -> Result<u64> {
+        msg!("flow_rate {}, flow_interval{}, starts_at {}, ends_at {}",self.flow_rate, self.flow_interval, self.starts_at, self.ends_at);
         if !self.is_prepaid || self.ends_at == 0 {
             Ok(0)
         } else if !self.has_flow_payments() {
@@ -592,6 +700,7 @@ impl Stream {
     /// Initialize a prepaid stream.
     pub fn initialize_prepaid(&mut self) -> Result<u64> {
         let prepaid_amount_needed = self.get_prepaid_amount_needed()?;
+        msg!("get_prepaid_amount_needed {}", prepaid_amount_needed);
         require!(prepaid_amount_needed > 0, StreamError::ZeroLifetimeAmount);
         self.add_topup_amount(get_current_timestamp()?, prepaid_amount_needed)?;
         Ok(prepaid_amount_needed)

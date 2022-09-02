@@ -90,6 +90,7 @@ pub mod state;
 
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
+use state::Activity;
 
 use crate::{
     error::StreamError,
@@ -98,10 +99,20 @@ use crate::{
     utils::is_token_account_rent_exempt,
 };
 
-declare_id!("EVAwWziymdW9hRxZR6TsSKZjisiyUsthF51tHCAE4moB");
+declare_id!("89XSrErdZFx8MpyohHFEievS7qqHDn9bZh33tV4xbz3K");
 
 /// PDA account seed to create new stream PDA accounts.
 pub const STREAM_ACCOUNT_SEED: &[u8] = b"stream";
+
+pub const ACTIVITY_ACCOUNT_SEED: &[u8] = b"activity";
+
+#[event]
+pub struct CreateStreamEvent{
+    sender: Pubkey,
+    recipient: Pubkey,
+    stream: Pubkey,
+    amount: u64,
+}
 
 #[program]
 pub mod superstream {
@@ -159,7 +170,14 @@ pub mod superstream {
         )?;
 
         let stream = &mut ctx.accounts.stream;
+        msg!("3333 in create_prepaid, stream pubkey: {}", stream.key());
         let prepaid_amount_needed = stream.initialize_prepaid()?;
+        emit!(CreateStreamEvent{
+            sender: ctx.accounts.sender.key(),
+            recipient: recipient.key(),
+            stream: stream.key(),
+            amount: initial_amount,
+        });
         ctx.accounts.transfer_to_escrow(prepaid_amount_needed)
     }
 
@@ -217,8 +235,32 @@ pub mod superstream {
         )?;
 
         let stream = &mut ctx.accounts.stream;
+        msg!("in create_non_prepaid, stream pubkey: {}", stream.key());
         stream.initialize_non_prepaid(topup_amount)?;
         ctx.accounts.transfer_to_escrow(topup_amount)
+    }
+
+    pub fn create_activity(
+        mut ctx: Context<CreateActivity>,
+        seed: u64,
+        name: String,
+        starts_at: u64,
+        ends_at: u64,
+        duration: u64,
+        min_amount: u64,
+    ) -> Result<()> {
+        create_activity_internal(
+            &mut ctx,
+            true,
+            seed,
+            name,
+            starts_at,
+            ends_at,
+            duration,
+            min_amount,
+        )?;
+        msg!("activity pubkey {} ", ctx.accounts.activity.key());
+        Ok(())
     }
 
     /// Cancel a stream.
@@ -379,7 +421,7 @@ pub(crate) fn create(
         is_token_account_rent_exempt(escrow_token_account)?,
         StreamError::EscrowNotRentExempt,
     );
-
+    msg!("In fn create!!!");
     let stream = &mut ctx.accounts.stream;
     stream.initialize(
         is_prepaid,
@@ -405,6 +447,35 @@ pub(crate) fn create(
         seed,
         *ctx.bumps.get("stream").unwrap(),
     )
+}
+
+pub(crate) fn create_activity_internal(
+    ctx: &mut Context<CreateActivity>,
+    is_active: bool,
+    seed: u64,
+    name: String,
+    starts_at: u64,
+    ends_at: u64,
+    duration: u64,
+    min_amount: u64,
+) -> Result<()> {
+    msg!("In fn create_activity_internal!!!");
+    let activity = &mut ctx.accounts.activity;
+    activity.initialize(
+        is_active,
+        ctx.accounts.creator.key(),
+        ctx.accounts.stake_mint.key(),
+        ctx.accounts.reward_mint.key(),
+        ctx.accounts.opt_reward_mint.key(),
+        starts_at,
+        ends_at,
+        duration,
+        min_amount,
+        seed,
+        *ctx.bumps.get("activity").unwrap(),
+        name,
+    )
+
 }
 
 /// Accounts struct for creating a new stream.
@@ -451,6 +522,43 @@ pub struct Create<'info> {
 
     /// SPL token program.
     pub token_program: Program<'info, Token>,
+    /// Solana system program.
+    pub system_program: Program<'info, System>,
+}
+
+
+// Accounts struct for creating a new stream.
+#[derive(Accounts)]
+#[instruction(seed: u64, name: String)]
+pub struct CreateActivity<'info> {
+    /// Stream PDA account. This is initialized by the program.
+    #[account(
+        init,
+        seeds = [
+            ACTIVITY_ACCOUNT_SEED,
+            seed.to_le_bytes().as_ref(),
+            stake_mint.key().as_ref(),
+            name.as_bytes(),
+        ],
+        payer = creator,
+        space = Activity::space(&name),
+        bump,
+    )]
+    pub activity: Account<'info, Activity>,
+
+    /// Stream sender wallet.
+    #[account(mut)]
+    pub creator: Signer<'info>,
+
+    /// SPL token mint account.
+    pub stake_mint: Box<Account<'info, Mint>>,
+
+    /// SPL token mint account.
+    pub reward_mint: Box<Account<'info, Mint>>,
+
+    /// SPL token mint account.
+    pub opt_reward_mint: Box<Account<'info, Mint>>,
+    
     /// Solana system program.
     pub system_program: Program<'info, System>,
 }
