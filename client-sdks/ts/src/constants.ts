@@ -9,6 +9,8 @@ export const SUPERSTREAM_PROGRAM_ID = "EVAwWziymdW9hRxZR6TsSKZjisiyUsthF51tHCAE4
  */
 export const STREAM_ACCOUNT_SEED = "stream";
 
+export const ACTIVITY_ACCOUNT_SEED = "activity";
+
 /**
  * Minimum length of a stream name.
  */

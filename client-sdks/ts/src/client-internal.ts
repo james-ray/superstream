@@ -13,6 +13,7 @@ import { StreamFilters, streamFiltersToAnchorFilters } from "./filters";
 import idl from "./gen/idl.json";
 import { Superstream } from "./gen/types";
 import { StreamPagination } from "./pagination";
+import { Activity } from "./activity";
 import { Stream } from "./stream";
 import { BN_ONE, BN_TEN, BN_TWO, BN_ZERO } from "./utils/bn";
 import { getErrorMessage } from "./utils/error";
@@ -20,8 +21,11 @@ import { getOrCreateAssociatedTokenAccount, mustGetAssociatedTokenAccount } from
 import { getCurrentTimeInSecsBN, getCurrentTimeInSecsBNOrNull } from "./utils/time";
 import { NO_OP_WALLET, Wallet } from "./utils/wallet";
 
-type ExtractGeneric<T> = T extends AccountClient<Superstream, Superstream["accounts"][0], infer X> ? X : never;
-export type StreamAccount = ExtractGeneric<AccountClient<Superstream, Superstream["accounts"][0]>>;
+type ExtractGeneric<T> = T extends AccountClient<Superstream, Superstream["accounts"][1], infer X> ? X : never;
+export type StreamAccount = ExtractGeneric<AccountClient<Superstream, Superstream["accounts"][1]>>;
+
+type ExtractGeneric0<T> = T extends AccountClient<Superstream, Superstream["accounts"][0], infer X> ? X : never;
+export type ActivityAccount = ExtractGeneric0<AccountClient<Superstream, Superstream["accounts"][0]>>;
 
 function hasKey<K extends string>(o: unknown, k: K): o is Record<K, unknown> {
   return typeof o === "object" && o != null && k in o;
@@ -89,6 +93,17 @@ export class SuperstreamClientInternal implements SuperstreamClient {
     );
   };
 
+  readonly getActivityPublicKey = async (
+    seed: BN,
+    mint: web3.PublicKey,
+    name: string,
+  ): Promise<[web3.PublicKey, number]> => {
+    return web3.PublicKey.findProgramAddress(
+      [Buffer.from(AC), seed.toBuffer("le", 8), mint.toBuffer(), Buffer.from(name)],
+      this.program.programId,
+    );
+  };
+
   readonly getNullableStream = async (publicKey: web3.PublicKey): Promise<Stream | null> => {
     const streamAccount: StreamAccount | null = await this.program.account.stream.fetchNullable(publicKey);
     return streamAccount ? Stream.fromStreamAccount(this, publicKey, streamAccount) : null;
@@ -99,9 +114,9 @@ export class SuperstreamClientInternal implements SuperstreamClient {
     return Stream.fromStreamAccount(this, publicKey, streamAccount);
   };
 
-  readonly getStream = async (publicKey: web3.PublicKey): Promise<Activity> => {
-    const streamAccount: StreamAccount = await this.program.account.stream.fetch(publicKey);
-    return Stream.fromStreamAccount(this, publicKey, streamAccount);
+  readonly getActivity= async (publicKey: web3.PublicKey): Promise<Activity> => {
+    const activityAccount: ActivityAccount = await this.program.account.activity.fetch(publicKey);
+    return Activity.fromActivityAccount(this, publicKey, activityAccount);
   };
 
   readonly getMultipleStreams = async (publicKeys: web3.PublicKey[]): Promise<(Stream | null)[]> => {

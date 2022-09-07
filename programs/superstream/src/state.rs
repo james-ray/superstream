@@ -52,9 +52,13 @@ pub struct Activity {
     /// INVARIANT: unbounded: == 0 || >= starts_at
     pub ends_at: u64,
 
-    pub duration: u64,
+    pub reward_expires_at: u64,
 
     pub min_amount: u64,
+
+    pub duration: u64,
+
+    pub flow_rate: u64,
 
     /// Seed of the stream PDA. It's upto the client how they choose the seed. Each tuple (seed, mint, name) corresponds
     /// to a unique stream.
@@ -73,10 +77,10 @@ impl Activity {
     const BASE_LENGTH: usize = ANCHOR_DISCRIMINATOR_LENGTH
         + 1 * BOOL_LENGTH       // is_active - 9
         + 4 * PUBLIC_KEY_LENGTH // creator, stake_mint, reward_mint, opt_reward_mint - 137
-        + 4 * U64_LENGTH        // created_at, starts_at, ends_at, duration - 169
-        + 1 * U64_LENGTH        // min_amount - 177
-        + 1 * U64_LENGTH        // seed - 185
-        + 1 * U8_LENGTH         // bump - 186
+        + 5 * U64_LENGTH        // created_at, starts_at, ends_at, reward_expires_at, duration, flow_rate - 185
+        + 1 * U64_LENGTH        // min_amount - 193
+        + 1 * U64_LENGTH        // seed - 201
+        + 1 * U8_LENGTH         // bump - 202
     ;
 
     pub fn space(name: &str) -> usize {
@@ -92,8 +96,10 @@ impl Activity {
         opt_reward_mint: Pubkey,
         starts_at: u64,
         ends_at: u64,
-        duration: u64,
+        reward_expires_at: u64,
         min_amount: u64,
+        duration: u64,
+        flow_rate: u64,
         seed: u64,
         bump: u8,
         name: String,
@@ -117,8 +123,10 @@ impl Activity {
         self.created_at = at;
         self.starts_at = starts_at;
         self.ends_at = ends_at;
+        self.reward_expires_at = reward_expires_at;
         self.duration = duration;
         self.min_amount = min_amount;
+        self.flow_rate = flow_rate;
         self.seed = seed;
         self.bump = bump;
         self.name = name;
@@ -130,6 +138,137 @@ impl Activity {
         Ok(())
     }
 }
+
+#[account]
+#[derive(Debug, PartialEq, Eq)]
+pub struct UserStakeInfo {
+    /// staker address.
+    pub staker: Pubkey,
+
+    pub activity: Pubkey,
+
+    pub total_amount: u64,
+
+    pub has_received_reward: bool,
+
+    /// Seed of the stream PDA. It's upto the client how they choose the seed. Each tuple (seed, mint, name) corresponds
+    /// to a unique stream.
+    pub seed: u64,
+    /// The PDA bump.
+    pub bump: u8,
+
+    /// Name of the stream. Should be unique for a particular set of (seed, mint).
+    ///
+    /// INVARIANT: Length <= 100 unicode chars or 400 bytes
+    pub name: String,
+}
+
+impl UserStakeInfo {
+    /// Total size of a Stream account excluding space taken up by the name
+    const BASE_LENGTH: usize = ANCHOR_DISCRIMINATOR_LENGTH
+        + 2 * PUBLIC_KEY_LENGTH // staker - 72,
+        + 1 * U64_LENGTH        // total_amount - 80
+        + 1 * BOOL_LENGTH       // has_received_reward - 81
+        + 1 * U64_LENGTH        // seed - 89
+        + 1 * U8_LENGTH         // bump - 90
+    ;
+
+    pub fn space(name: &str) -> usize {
+        Self::BASE_LENGTH + STRING_LENGTH_PREFIX + name.len()
+    }
+
+    pub fn initialize(
+        &mut self,
+        staker: Pubkey,
+        activity: Pubkey,
+        total_amount: u64,
+        has_received_reward: bool,
+        seed: u64,
+        bump: u8,
+        name: String,
+    ) -> Result<()> {
+        require!(name.len() >= MIN_STREAM_NAME_LENGTH, StreamError::StreamNameTooShort);
+        require!(name.len() <= MAX_STREAM_NAME_LENGTH, StreamError::StreamNameTooLong);
+        require!(has_received_reward == false,StreamError::ZeroFlowInterval);
+
+        self.staker = staker;
+        self.activity = activity;
+        self.total_amount = total_amount;
+        self.has_received_reward = has_received_reward;
+        self.seed = seed;
+        self.bump = bump;
+        self.name = name;
+
+        require!(
+            self.total_amount == 0 ,
+            StreamError::ZeroLifetimeAmount
+        );
+        Ok(())
+    }
+}
+
+#[account]
+#[derive(Debug)]
+pub struct ActivityRewardBoard {
+    pub activity: Pubkey,
+
+    pub num: u8,
+
+    pub rewarders: Vec<Pubkey>,
+    pub rewards: Vec<u64>,
+    pub opt_rewards: Vec<u64>,
+
+    pub seed: u64,
+    /// The PDA bump.
+    pub bump: u8,
+
+    /// Name of the stream. Should be unique for a particular set of (seed, mint).
+    ///
+    /// INVARIANT: Length <= 100 unicode chars or 400 bytes
+    pub name: String,
+}
+
+impl ActivityRewardBoard {
+    /// Total size of a Stream account excluding space taken up by the name
+    const BASE_LENGTH: usize = ANCHOR_DISCRIMINATOR_LENGTH;
+
+    pub fn space(num: u8,name: &str) -> usize {
+        Self::BASE_LENGTH 
+        + 48 * num as usize
+        + STRING_LENGTH_PREFIX + name.len()
+    }
+
+    pub fn initialize(
+        &mut self,
+        activity: Pubkey,
+        num: u8,
+        rewarders: Vec<Pubkey>,
+        rewards: Vec<u64>,
+        opt_rewards: Vec<u64>,
+        seed: u64,
+        bump: u8,
+        name: String,
+    ) -> Result<()> {
+        require!(name.len() >= MIN_STREAM_NAME_LENGTH, StreamError::StreamNameTooShort);
+        require!(name.len() <= MAX_STREAM_NAME_LENGTH, StreamError::StreamNameTooLong);
+
+        require!(rewarders.len() == num as usize, StreamError::InvalidRecipient);
+        require!(rewards.len() == num as usize, StreamError::InvalidRecipient);
+        require!(opt_rewards.len() == num as usize, StreamError::InvalidRecipient);
+
+        self.activity = activity;
+        self.num=num;
+        self.rewarders = rewarders;
+        self.rewards=rewards;
+        self.opt_rewards = opt_rewards;
+
+        self.seed = seed;
+        self.bump = bump;
+        self.name = name;
+        Ok(())
+    }
+}
+
 
 /// A payment stream with support for SPL tokens, prepaid and limited upfront payment, unlimited lifetime, cliffs and
 /// cancellations.

@@ -372,6 +372,10 @@ export type Superstream = {
         {
           "name": "minAmount",
           "type": "u64"
+        },
+        {
+          "name": "flowRate",
+          "type": "u64"
         }
       ]
     },
@@ -1005,11 +1009,15 @@ export type Superstream = {
             "type": "u64"
           },
           {
+            "name": "minAmount",
+            "type": "u64"
+          },
+          {
             "name": "duration",
             "type": "u64"
           },
           {
-            "name": "minAmount",
+            "name": "flowRate",
             "type": "u64"
           },
           {
@@ -1998,6 +2006,10 @@ export const IDL: Superstream = {
         {
           "name": "minAmount",
           "type": "u64"
+        },
+        {
+          "name": "flowRate",
+          "type": "u64"
         }
       ]
     },
@@ -2631,11 +2643,15 @@ export const IDL: Superstream = {
             "type": "u64"
           },
           {
+            "name": "minAmount",
+            "type": "u64"
+          },
+          {
             "name": "duration",
             "type": "u64"
           },
           {
-            "name": "minAmount",
+            "name": "flowRate",
             "type": "u64"
           },
           {

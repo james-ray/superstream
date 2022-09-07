@@ -91,6 +91,7 @@ pub mod state;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 use state::Activity;
+use state::ActivityRewardBoard;
 
 use crate::{
     error::StreamError,
@@ -105,6 +106,8 @@ declare_id!("89XSrErdZFx8MpyohHFEievS7qqHDn9bZh33tV4xbz3K");
 pub const STREAM_ACCOUNT_SEED: &[u8] = b"stream";
 
 pub const ACTIVITY_ACCOUNT_SEED: &[u8] = b"activity";
+
+pub const REWARDS_BOARD_ACCOUNT_SEED: &[u8] = b"rewards_board";
 
 #[event]
 pub struct CreateStreamEvent{
@@ -246,8 +249,10 @@ pub mod superstream {
         name: String,
         starts_at: u64,
         ends_at: u64,
+        reward_expires_at:u64,
         duration: u64,
         min_amount: u64,
+        flow_rate: u64,
     ) -> Result<()> {
         create_activity_internal(
             &mut ctx,
@@ -256,10 +261,34 @@ pub mod superstream {
             name,
             starts_at,
             ends_at,
+            reward_expires_at,
             duration,
             min_amount,
+            flow_rate,
         )?;
         msg!("activity pubkey {} ", ctx.accounts.activity.key());
+        Ok(())
+    }
+
+    pub fn create_rewards_board(
+        mut ctx: Context<CreateRewardsBoard>,
+        num: u8,
+        seed: u64,
+        name: String,
+        rewarders: [Pubkey; 100],
+        rewards: [u64;100],
+        opt_rewards: [u64;100],
+    ) -> Result<()> {
+        create_rewards_board_internal(
+            &mut ctx,
+            num,
+            seed,
+            name,
+            rewarders,
+            rewards,
+            opt_rewards,
+        )?;
+        msg!("rewards_board pubkey {} ", ctx.accounts.rewards_board.key());
         Ok(())
     }
 
@@ -456,8 +485,10 @@ pub(crate) fn create_activity_internal(
     name: String,
     starts_at: u64,
     ends_at: u64,
+    reward_expires_at: u64,
     duration: u64,
     min_amount: u64,
+    flow_rate: u64,
 ) -> Result<()> {
     msg!("In fn create_activity_internal!!!");
     let activity = &mut ctx.accounts.activity;
@@ -469,13 +500,48 @@ pub(crate) fn create_activity_internal(
         ctx.accounts.opt_reward_mint.key(),
         starts_at,
         ends_at,
-        duration,
+        reward_expires_at,
         min_amount,
+        duration,
+        flow_rate,
         seed,
         *ctx.bumps.get("activity").unwrap(),
         name,
     )
+}
 
+pub(crate) fn create_rewards_board_internal(
+    ctx: &mut Context<CreateRewardsBoard>,
+    num: u8,
+    seed: u64,
+    name: String,
+    rewarders: [Pubkey; 100],
+    rewards: [u64;100],
+    opt_rewards: [u64;100],
+) -> Result<()> {
+    msg!("In fn create_rewards_board_internal!!!");
+    let board = &mut ctx.accounts.rewards_board;
+
+    let mut i = 0;
+    let mut rewards_vec=Vec::new();
+    let mut opt_rewards_vec=Vec::new();
+    let mut rewarders_vec=Vec::new();
+    while i < num {
+        rewards_vec.push(rewards.get(i));
+        opt_rewards_vec.push(rewards.get(i));
+        rewarders_vec.push(rewarders.get(i));
+        i = i + 1;
+    }
+    board.initialize(
+        ctx.accounts.activity,
+        num,
+        rewarders_vec,
+        rewards_vec,
+        opt_rewards_vec,
+        seed,
+        *ctx.bumps.get("activity").unwrap(),
+        name,
+    )
 }
 
 /// Accounts struct for creating a new stream.
@@ -546,7 +612,6 @@ pub struct CreateActivity<'info> {
     )]
     pub activity: Account<'info, Activity>,
 
-    /// Stream sender wallet.
     #[account(mut)]
     pub creator: Signer<'info>,
 
@@ -558,6 +623,34 @@ pub struct CreateActivity<'info> {
 
     /// SPL token mint account.
     pub opt_reward_mint: Box<Account<'info, Mint>>,
+    
+    /// Solana system program.
+    pub system_program: Program<'info, System>,
+}
+
+// Accounts struct for creating a new stream.
+#[derive(Accounts)]
+#[instruction(seed: u64, name: String)]
+pub struct CreateRewardsBoard<'info> {
+    /// Stream PDA account. This is initialized by the program.
+    #[account(
+        init,
+        seeds = [
+            REWARDS_BOARD_ACCOUNT_SEED,
+            seed.to_le_bytes().as_ref(),
+            activity.key().as_ref(),
+            name.as_bytes(),
+        ],
+        payer = creator,
+        space = 9000,
+        bump,
+    )]
+    pub rewards_board: Account<'info, ActivityRewardBoard>,
+
+    pub activity: Account<'info, Activity>,
+
+    #[account(mut)]
+    pub creator: Signer<'info>,
     
     /// Solana system program.
     pub system_program: Program<'info, System>,
