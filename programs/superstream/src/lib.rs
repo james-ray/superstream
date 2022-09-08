@@ -89,9 +89,10 @@ pub mod error;
 pub mod state;
 
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, Token, TokenAccount};
+use anchor_spl::token::{self, TokenAccount, Mint, Token };
 use state::Activity;
-use state::ActivityRewardBoard;
+use state::Distributor;
+use state::Status;
 
 use crate::{
     error::StreamError,
@@ -106,8 +107,6 @@ declare_id!("89XSrErdZFx8MpyohHFEievS7qqHDn9bZh33tV4xbz3K");
 pub const STREAM_ACCOUNT_SEED: &[u8] = b"stream";
 
 pub const ACTIVITY_ACCOUNT_SEED: &[u8] = b"activity";
-
-pub const REWARDS_BOARD_ACCOUNT_SEED: &[u8] = b"rewards_board";
 
 #[event]
 pub struct CreateStreamEvent{
@@ -270,28 +269,89 @@ pub mod superstream {
         Ok(())
     }
 
-    pub fn create_rewards_board(
-        mut ctx: Context<CreateRewardsBoard>,
-        num: u8,
-        seed: u64,
-        name: String,
-        rewarders: [Pubkey; 100],
-        rewards: [u64;100],
-        opt_rewards: [u64;100],
+    pub fn create_distributor(
+        ctx: Context<NewDistributor>,
+        _bump:u8, 
+        root:[u8; 32],
+        total_supply: u64,
     ) -> Result<()> {
-        create_rewards_board_internal(
-            &mut ctx,
-            num,
-            seed,
-            name,
-            rewarders,
-            rewards,
-            opt_rewards,
-        )?;
-        msg!("rewards_board pubkey {} ", ctx.accounts.rewards_board.key());
-        Ok(())
+        let distributor = &mut ctx.accounts.distributor;
+        require!(ctx.accounts.mint.key() == ctx.accounts.activity.reward_mint.key()||ctx.accounts.mint.key() == ctx.accounts.activity.opt_reward_mint.key(),StreamError::WrongRewardMint);
+        distributor.activity_key = ctx.accounts.activity.key();
+        distributor.bump = _bump;
+        distributor.root = root;
+        distributor.total_claimed = 0;
+        distributor.total_supply = total_supply;
+        distributor.mint = ctx.accounts.mint.key();
+
+        transfer_to_escrow(
+            &ctx.accounts.creator,
+            &ctx.accounts.sender_token,
+            &ctx.accounts.reward_escrow_token,
+            &ctx.accounts.token_program,
+            total_supply,
+        )
     }
 
+    pub fn claim(ctx: Context<Claim>,  _bump: u8, index: u64, amount: u64, proof: Vec<[u8; 32]>) -> Result<()> {
+        //Check claim status
+        let claimer = &ctx.accounts.claimer;
+        let status = &mut ctx.accounts.status;
+        let distributor = &ctx.accounts.distributor;
+
+        if status.is_claimed {
+            return Err(StreamError::AlreadyClaimed.into());
+        }
+
+        if distributor.total_claimed < amount {
+            return Err(StreamError::MaxClaim.into());
+        }
+
+        if distributor.mint.key() != ctx.accounts.recipent_tokens.mint.key() {
+            return Err(StreamError::InvalidRecipient.into());
+        }
+        
+        //Verify merkle proof
+        let node = anchor_lang::solana_program::keccak::hashv(&[
+            &index.to_le_bytes(),
+            &claimer.key().to_bytes(),
+            &amount.to_le_bytes(),
+        ]);
+        
+        if !utils::verify(proof, distributor.root, node.0) {
+            return Err(StreamError::InvalidMerkleProof.into());
+        }
+
+        if ctx.accounts.recipent_tokens.owner != claimer.key() {
+            return Err(StreamError::InvalidOwner.into());
+        }
+
+        //Mark claimed and send token
+        status.amount = amount;
+        status.is_claimed = true;
+        status.claimer = claimer.key();
+        let seeds  = [ 
+            b"Distributor".as_ref(), 
+            &distributor.activity_key.to_bytes(), 
+            &distributor.mint.to_bytes(), 
+            &[ctx.accounts.distributor.bump],
+            ];
+        token::transfer(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                token::Transfer {
+                    from: ctx.accounts.escrow_token.to_account_info(),
+                    to: ctx.accounts.recipent_tokens.to_account_info(),
+                    authority: ctx.accounts.distributor.to_account_info(),
+                },
+            )
+            .with_signer(&[&seeds[..]]),
+            amount,
+        )?;
+
+        Ok(())
+    }
+    
     /// Cancel a stream.
     ///
     /// # Arguments
@@ -510,40 +570,6 @@ pub(crate) fn create_activity_internal(
     )
 }
 
-pub(crate) fn create_rewards_board_internal(
-    ctx: &mut Context<CreateRewardsBoard>,
-    num: u8,
-    seed: u64,
-    name: String,
-    rewarders: [Pubkey; 100],
-    rewards: [u64;100],
-    opt_rewards: [u64;100],
-) -> Result<()> {
-    msg!("In fn create_rewards_board_internal!!!");
-    let board = &mut ctx.accounts.rewards_board;
-
-    let mut i = 0;
-    let mut rewards_vec=Vec::new();
-    let mut opt_rewards_vec=Vec::new();
-    let mut rewarders_vec=Vec::new();
-    while i < num {
-        rewards_vec.push(rewards.get(i));
-        opt_rewards_vec.push(rewards.get(i));
-        rewarders_vec.push(rewarders.get(i));
-        i = i + 1;
-    }
-    board.initialize(
-        ctx.accounts.activity,
-        num,
-        rewarders_vec,
-        rewards_vec,
-        opt_rewards_vec,
-        seed,
-        *ctx.bumps.get("activity").unwrap(),
-        name,
-    )
-}
-
 /// Accounts struct for creating a new stream.
 #[derive(Accounts)]
 #[instruction(seed: u64, name: String)]
@@ -578,6 +604,7 @@ pub struct Create<'info> {
     )]
     pub sender_token: Box<Account<'info, TokenAccount>>,
     /// Associated token escrow account holding the funds for this stream.
+    /// It does not need to be included in Stream struct, but needs to be sent within the createStream instruction
     #[account(
         mut,
         constraint =
@@ -621,38 +648,95 @@ pub struct CreateActivity<'info> {
     /// SPL token mint account.
     pub reward_mint: Box<Account<'info, Mint>>,
 
-    /// SPL token mint account.
-    pub opt_reward_mint: Box<Account<'info, Mint>>,
+     /// SPL token mint account.
+     pub opt_reward_mint: Box<Account<'info, Mint>>,
     
     /// Solana system program.
     pub system_program: Program<'info, System>,
 }
 
-// Accounts struct for creating a new stream.
 #[derive(Accounts)]
-#[instruction(seed: u64, name: String)]
-pub struct CreateRewardsBoard<'info> {
-    /// Stream PDA account. This is initialized by the program.
+pub struct NewDistributor<'info> {
     #[account(
-        init,
+        init, 
+        payer = creator, 
+        space = 9000,     //TODO: implement space()
         seeds = [
-            REWARDS_BOARD_ACCOUNT_SEED,
-            seed.to_le_bytes().as_ref(),
-            activity.key().as_ref(),
-            name.as_bytes(),
-        ],
-        payer = creator,
-        space = 9000,
-        bump,
+            b"Distributor".as_ref(),
+            activity.key().to_bytes().as_ref(),
+            mint.key().to_bytes().as_ref()
+            ], 
+        bump
     )]
-    pub rewards_board: Account<'info, ActivityRewardBoard>,
+    pub distributor: Account<'info, Distributor>,
 
     pub activity: Account<'info, Activity>,
 
     #[account(mut)]
     pub creator: Signer<'info>,
+
+    /// Associated token account of the sender.
+    #[account(
+        mut,
+        constraint =
+            sender_token.mint == mint.key()
+            && sender_token.owner == creator.key(),
+    )]
+    pub sender_token: Box<Account<'info, TokenAccount>>,
+
+    pub mint: Account<'info, Mint>,
+
+    /// distributor is a PDA of this program, distributor.key() is this program.
+    #[account(
+        mut,
+        constraint =
+        reward_escrow_token.mint == mint.key()
+            && reward_escrow_token.owner == distributor.key(),   
+    )]
+    pub reward_escrow_token: Box<Account<'info, TokenAccount>>,
+
+    /// SPL token program.
+    pub token_program: Program<'info, Token>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct Claim<'info> {
+    #[account(mut)] //state for account
+    pub distributor: Account<'info, Distributor>,
+
+    #[account(
+        mut,
+        constraint =
+            escrow_token.mint == reward_mint.key()
+            && escrow_token.owner == distributor.key(),
+    )]
+    pub escrow_token: Box<Account<'info, TokenAccount>>,
     
-    /// Solana system program.
+    #[account(mut)]
+    pub recipent_tokens: Account<'info, TokenAccount>,
+
+    #[account(mut)]
+    pub claimer: Signer<'info>,
+
+    /// SPL token mint account.
+    pub reward_mint: Box<Account<'info, Mint>>,
+
+    #[account(
+        init, 
+        payer = claimer, 
+        seeds = [
+            b"Status".as_ref(), 
+            distributor.to_account_info().key().to_bytes().as_ref(),
+            claimer.key().to_bytes().as_ref(),
+            ], 
+        bump, 
+        space = 50)]
+    pub status: Account<'info, Status>,
+
+    pub token_program: Program<'info, Token>,
+
     pub system_program: Program<'info, System>,
 }
 

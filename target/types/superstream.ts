@@ -52,7 +52,8 @@ export type Superstream = {
           "isMut": true,
           "isSigner": false,
           "docs": [
-            "Associated token escrow account holding the funds for this stream."
+            "Associated token escrow account holding the funds for this stream.",
+            "It does not need to be included in Stream struct, but needs to be sent within the createStream instruction"
           ]
         },
         {
@@ -197,7 +198,8 @@ export type Superstream = {
           "isMut": true,
           "isSigner": false,
           "docs": [
-            "Associated token escrow account holding the funds for this stream."
+            "Associated token escrow account holding the funds for this stream.",
+            "It does not need to be included in Stream struct, but needs to be sent within the createStream instruction"
           ]
         },
         {
@@ -310,10 +312,7 @@ export type Superstream = {
         {
           "name": "creator",
           "isMut": true,
-          "isSigner": true,
-          "docs": [
-            "Stream sender wallet."
-          ]
+          "isSigner": true
         },
         {
           "name": "stakeMint",
@@ -366,6 +365,10 @@ export type Superstream = {
           "type": "u64"
         },
         {
+          "name": "rewardExpiresAt",
+          "type": "u64"
+        },
+        {
           "name": "duration",
           "type": "u64"
         },
@@ -376,6 +379,152 @@ export type Superstream = {
         {
           "name": "flowRate",
           "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "createDistributor",
+      "accounts": [
+        {
+          "name": "distributor",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "activity",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "creator",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "senderToken",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Associated token account of the sender."
+          ]
+        },
+        {
+          "name": "mint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rewardEscrowToken",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "distributor is a PDA of this program, distributor.key() is this program."
+          ]
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "SPL token program."
+          ]
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "bump",
+          "type": "u8"
+        },
+        {
+          "name": "root",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "totalSupply",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "claim",
+      "accounts": [
+        {
+          "name": "distributor",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowToken",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "recipentTokens",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "claimer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "rewardMint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "SPL token mint account."
+          ]
+        },
+        {
+          "name": "status",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "bump",
+          "type": "u8"
+        },
+        {
+          "name": "index",
+          "type": "u64"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "proof",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
         }
       ]
     },
@@ -942,6 +1091,67 @@ export type Superstream = {
   ],
   "accounts": [
     {
+      "name": "distributor",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "distributorKey",
+            "type": "publicKey"
+          },
+          {
+            "name": "activityKey",
+            "type": "publicKey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "root",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "totalSupply",
+            "type": "u64"
+          },
+          {
+            "name": "totalClaimed",
+            "type": "u64"
+          },
+          {
+            "name": "mint",
+            "type": "publicKey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "status",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "isClaimed",
+            "type": "bool"
+          },
+          {
+            "name": "claimer",
+            "type": "publicKey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "activity",
       "type": {
         "kind": "struct",
@@ -1006,6 +1216,10 @@ export type Superstream = {
               "INVARIANT: prepaid: >= starts_at",
               "INVARIANT: unbounded: == 0 || >= starts_at"
             ],
+            "type": "u64"
+          },
+          {
+            "name": "rewardExpiresAt",
             "type": "u64"
           },
           {
@@ -1628,6 +1842,31 @@ export type Superstream = {
       "code": 6039,
       "name": "StreamNotEnded",
       "msg": "The stream has not ended. Should have ended and nat been cancelled"
+    },
+    {
+      "code": 6040,
+      "name": "WrongRewardMint",
+      "msg": "The distributor mint is not reward mint or opt-reward mint"
+    },
+    {
+      "code": 6041,
+      "name": "AlreadyClaimed",
+      "msg": "Already Claimed"
+    },
+    {
+      "code": 6042,
+      "name": "InvalidMerkleProof",
+      "msg": "Invalid Merkle proof"
+    },
+    {
+      "code": 6043,
+      "name": "InvalidOwner",
+      "msg": "Invalid Owner"
+    },
+    {
+      "code": 6044,
+      "name": "MaxClaim",
+      "msg": "Maximum claim amount"
     }
   ]
 };
@@ -1686,7 +1925,8 @@ export const IDL: Superstream = {
           "isMut": true,
           "isSigner": false,
           "docs": [
-            "Associated token escrow account holding the funds for this stream."
+            "Associated token escrow account holding the funds for this stream.",
+            "It does not need to be included in Stream struct, but needs to be sent within the createStream instruction"
           ]
         },
         {
@@ -1831,7 +2071,8 @@ export const IDL: Superstream = {
           "isMut": true,
           "isSigner": false,
           "docs": [
-            "Associated token escrow account holding the funds for this stream."
+            "Associated token escrow account holding the funds for this stream.",
+            "It does not need to be included in Stream struct, but needs to be sent within the createStream instruction"
           ]
         },
         {
@@ -1944,10 +2185,7 @@ export const IDL: Superstream = {
         {
           "name": "creator",
           "isMut": true,
-          "isSigner": true,
-          "docs": [
-            "Stream sender wallet."
-          ]
+          "isSigner": true
         },
         {
           "name": "stakeMint",
@@ -2000,6 +2238,10 @@ export const IDL: Superstream = {
           "type": "u64"
         },
         {
+          "name": "rewardExpiresAt",
+          "type": "u64"
+        },
+        {
           "name": "duration",
           "type": "u64"
         },
@@ -2010,6 +2252,152 @@ export const IDL: Superstream = {
         {
           "name": "flowRate",
           "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "createDistributor",
+      "accounts": [
+        {
+          "name": "distributor",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "activity",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "creator",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "senderToken",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Associated token account of the sender."
+          ]
+        },
+        {
+          "name": "mint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rewardEscrowToken",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "distributor is a PDA of this program, distributor.key() is this program."
+          ]
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "SPL token program."
+          ]
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "bump",
+          "type": "u8"
+        },
+        {
+          "name": "root",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "totalSupply",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "claim",
+      "accounts": [
+        {
+          "name": "distributor",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowToken",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "recipentTokens",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "claimer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "rewardMint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "SPL token mint account."
+          ]
+        },
+        {
+          "name": "status",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "bump",
+          "type": "u8"
+        },
+        {
+          "name": "index",
+          "type": "u64"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "proof",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
         }
       ]
     },
@@ -2576,6 +2964,67 @@ export const IDL: Superstream = {
   ],
   "accounts": [
     {
+      "name": "distributor",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "distributorKey",
+            "type": "publicKey"
+          },
+          {
+            "name": "activityKey",
+            "type": "publicKey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "root",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "totalSupply",
+            "type": "u64"
+          },
+          {
+            "name": "totalClaimed",
+            "type": "u64"
+          },
+          {
+            "name": "mint",
+            "type": "publicKey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "status",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "isClaimed",
+            "type": "bool"
+          },
+          {
+            "name": "claimer",
+            "type": "publicKey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "activity",
       "type": {
         "kind": "struct",
@@ -2640,6 +3089,10 @@ export const IDL: Superstream = {
               "INVARIANT: prepaid: >= starts_at",
               "INVARIANT: unbounded: == 0 || >= starts_at"
             ],
+            "type": "u64"
+          },
+          {
+            "name": "rewardExpiresAt",
             "type": "u64"
           },
           {
@@ -3262,6 +3715,31 @@ export const IDL: Superstream = {
       "code": 6039,
       "name": "StreamNotEnded",
       "msg": "The stream has not ended. Should have ended and nat been cancelled"
+    },
+    {
+      "code": 6040,
+      "name": "WrongRewardMint",
+      "msg": "The distributor mint is not reward mint or opt-reward mint"
+    },
+    {
+      "code": 6041,
+      "name": "AlreadyClaimed",
+      "msg": "Already Claimed"
+    },
+    {
+      "code": 6042,
+      "name": "InvalidMerkleProof",
+      "msg": "Invalid Merkle proof"
+    },
+    {
+      "code": 6043,
+      "name": "InvalidOwner",
+      "msg": "Invalid Owner"
+    },
+    {
+      "code": 6044,
+      "name": "MaxClaim",
+      "msg": "Maximum claim amount"
     }
   ]
 };

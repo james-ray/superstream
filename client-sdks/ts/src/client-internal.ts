@@ -1,6 +1,7 @@
 import { BN, Program, web3, AccountClient, ProgramAccount, AnchorProvider } from "@project-serum/anchor";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
+import { Activity } from "./activity";
 import { SuperstreamClient } from "./client";
 import {
   DEPOSIT_AMOUNT_PERIOD_IN_SECS_BN,
@@ -13,7 +14,6 @@ import { StreamFilters, streamFiltersToAnchorFilters } from "./filters";
 import idl from "./gen/idl.json";
 import { Superstream } from "./gen/types";
 import { StreamPagination } from "./pagination";
-import { Activity } from "./activity";
 import { Stream } from "./stream";
 import { BN_ONE, BN_TEN, BN_TWO, BN_ZERO } from "./utils/bn";
 import { getErrorMessage } from "./utils/error";

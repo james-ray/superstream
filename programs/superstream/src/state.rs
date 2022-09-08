@@ -25,6 +25,34 @@ pub const MAX_STREAM_NAME_LENGTH: usize = 100;
 pub const DEPOSIT_AMOUNT_PERIOD_IN_SECS: u64 = 8 * 60 * 60; // 8 hrs
 
 #[account]
+pub struct Distributor {
+    pub distributor_key: Pubkey,
+
+    pub activity_key: Pubkey,
+
+    pub bump: u8,
+
+    pub root: [u8;32],
+
+    pub total_supply: u64,
+
+    pub total_claimed: u64,
+
+    // the mint to distribute
+    pub mint: Pubkey,
+}   
+
+#[account]
+#[derive(Default)]
+pub struct Status {
+    pub is_claimed: bool,
+
+    pub claimer: Pubkey,
+
+    pub amount: u64,
+}
+
+#[account]
 #[derive(Debug, PartialEq, Eq)]
 pub struct Activity {
     /// If true, the stream is prepaid - all the required amount needs to be deposited on creation. Prepaid streams
@@ -56,8 +84,10 @@ pub struct Activity {
 
     pub min_amount: u64,
 
+    // required stake time
     pub duration: u64,
 
+    // should be ZERO, unless you want to use superstream original reward function
     pub flow_rate: u64,
 
     /// Seed of the stream PDA. It's upto the client how they choose the seed. Each tuple (seed, mint, name) corresponds
@@ -138,137 +168,6 @@ impl Activity {
         Ok(())
     }
 }
-
-#[account]
-#[derive(Debug, PartialEq, Eq)]
-pub struct UserStakeInfo {
-    /// staker address.
-    pub staker: Pubkey,
-
-    pub activity: Pubkey,
-
-    pub total_amount: u64,
-
-    pub has_received_reward: bool,
-
-    /// Seed of the stream PDA. It's upto the client how they choose the seed. Each tuple (seed, mint, name) corresponds
-    /// to a unique stream.
-    pub seed: u64,
-    /// The PDA bump.
-    pub bump: u8,
-
-    /// Name of the stream. Should be unique for a particular set of (seed, mint).
-    ///
-    /// INVARIANT: Length <= 100 unicode chars or 400 bytes
-    pub name: String,
-}
-
-impl UserStakeInfo {
-    /// Total size of a Stream account excluding space taken up by the name
-    const BASE_LENGTH: usize = ANCHOR_DISCRIMINATOR_LENGTH
-        + 2 * PUBLIC_KEY_LENGTH // staker - 72,
-        + 1 * U64_LENGTH        // total_amount - 80
-        + 1 * BOOL_LENGTH       // has_received_reward - 81
-        + 1 * U64_LENGTH        // seed - 89
-        + 1 * U8_LENGTH         // bump - 90
-    ;
-
-    pub fn space(name: &str) -> usize {
-        Self::BASE_LENGTH + STRING_LENGTH_PREFIX + name.len()
-    }
-
-    pub fn initialize(
-        &mut self,
-        staker: Pubkey,
-        activity: Pubkey,
-        total_amount: u64,
-        has_received_reward: bool,
-        seed: u64,
-        bump: u8,
-        name: String,
-    ) -> Result<()> {
-        require!(name.len() >= MIN_STREAM_NAME_LENGTH, StreamError::StreamNameTooShort);
-        require!(name.len() <= MAX_STREAM_NAME_LENGTH, StreamError::StreamNameTooLong);
-        require!(has_received_reward == false,StreamError::ZeroFlowInterval);
-
-        self.staker = staker;
-        self.activity = activity;
-        self.total_amount = total_amount;
-        self.has_received_reward = has_received_reward;
-        self.seed = seed;
-        self.bump = bump;
-        self.name = name;
-
-        require!(
-            self.total_amount == 0 ,
-            StreamError::ZeroLifetimeAmount
-        );
-        Ok(())
-    }
-}
-
-#[account]
-#[derive(Debug)]
-pub struct ActivityRewardBoard {
-    pub activity: Pubkey,
-
-    pub num: u8,
-
-    pub rewarders: Vec<Pubkey>,
-    pub rewards: Vec<u64>,
-    pub opt_rewards: Vec<u64>,
-
-    pub seed: u64,
-    /// The PDA bump.
-    pub bump: u8,
-
-    /// Name of the stream. Should be unique for a particular set of (seed, mint).
-    ///
-    /// INVARIANT: Length <= 100 unicode chars or 400 bytes
-    pub name: String,
-}
-
-impl ActivityRewardBoard {
-    /// Total size of a Stream account excluding space taken up by the name
-    const BASE_LENGTH: usize = ANCHOR_DISCRIMINATOR_LENGTH;
-
-    pub fn space(num: u8,name: &str) -> usize {
-        Self::BASE_LENGTH 
-        + 48 * num as usize
-        + STRING_LENGTH_PREFIX + name.len()
-    }
-
-    pub fn initialize(
-        &mut self,
-        activity: Pubkey,
-        num: u8,
-        rewarders: Vec<Pubkey>,
-        rewards: Vec<u64>,
-        opt_rewards: Vec<u64>,
-        seed: u64,
-        bump: u8,
-        name: String,
-    ) -> Result<()> {
-        require!(name.len() >= MIN_STREAM_NAME_LENGTH, StreamError::StreamNameTooShort);
-        require!(name.len() <= MAX_STREAM_NAME_LENGTH, StreamError::StreamNameTooLong);
-
-        require!(rewarders.len() == num as usize, StreamError::InvalidRecipient);
-        require!(rewards.len() == num as usize, StreamError::InvalidRecipient);
-        require!(opt_rewards.len() == num as usize, StreamError::InvalidRecipient);
-
-        self.activity = activity;
-        self.num=num;
-        self.rewarders = rewarders;
-        self.rewards=rewards;
-        self.opt_rewards = opt_rewards;
-
-        self.seed = seed;
-        self.bump = bump;
-        self.name = name;
-        Ok(())
-    }
-}
-
 
 /// A payment stream with support for SPL tokens, prepaid and limited upfront payment, unlimited lifetime, cliffs and
 /// cancellations.

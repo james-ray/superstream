@@ -127,4 +127,19 @@ pub enum StreamError {
     /// The stream has not ended. Should have ended and nat been cancelled.
     #[msg("The stream has not ended. Should have ended and nat been cancelled")]
     StreamNotEnded,
+
+    #[msg("The distributor mint is not reward mint or opt-reward mint")]
+    WrongRewardMint,
+
+    #[msg("Already Claimed")]
+    AlreadyClaimed,
+
+    #[msg("Invalid Merkle proof")]
+    InvalidMerkleProof,
+
+    #[msg("Invalid Owner")]
+    InvalidOwner,
+
+    #[msg("Maximum claim amount")]
+    MaxClaim,
 }

@@ -21,18 +21,58 @@ import {
   MINT_SIZE,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
+import keccak256 = require("keccak256");
 
 import { Superstream } from "../target/types/superstream";
+import { MerkleTree } from "./scripts/merkle_tree";
 
 const STREAM_ACCOUNT_SEED = "stream";
 const ACTIVITY_ACCOUNT_SEED = "activity";
+const DISTRIBUTOR_ACCOUNT_SEED = "distributor";
+
+export class Claimer {
+  pubKey!: web3.PublicKey;
+  amount!: number;
+}
+export function claimersToLeaves(claimers: Claimer[]): Buffer[] {
+  let i = -1;
+  const leaves: Buffer[] = [];
+  claimers.map((x) =>
+    leaves.push(
+      Buffer.from(
+        keccak256(
+          Buffer.concat([
+            new BN((i += 1)).toArrayLike(Buffer, "le", 8),
+            x.pubKey.toBuffer(),
+            new BN(x.amount).toArrayLike(Buffer, "le", 8),
+          ]),
+        ),
+      ),
+    ),
+  );
+  return leaves;
+}
+
+export function getProof(tree: MerkleTree, index: number): Buffer[] {
+  const nodes = tree.nodes();
+  const proofs = [];
+  let currentIndex = index;
+  for (let i = 0; i < nodes.length - 1; i++) {
+    const proof = currentIndex % 2 == 0 ? nodes[i][currentIndex + 1] : nodes[i][currentIndex - 1];
+    currentIndex = (currentIndex - (currentIndex % 2)) / 2;
+    proofs.push(proof);
+  }
+  const buffer: Buffer[] = [];
+  proofs.forEach((x) => buffer.push(x.hash));
+  return buffer;
+}
 
 describe("superstream", () => {
   const provider = AnchorProvider.env();
   setProvider(provider);
 
   const program = workspace.Superstream as Program<Superstream>;
-  console.log("program id is "+program.programId)
+  console.log("program id is " + program.programId);
 
   const sender = provider.wallet;
 
@@ -48,18 +88,18 @@ describe("superstream", () => {
   let senderTokenAmount = new BN(1e10);
 
   it("Initializes test setup", async () => {
-    console.log("111111111 program id is "+program.programId)
+    console.log("111111111 program id is " + program.programId);
     mint = await createMint(provider);
     reward_mint = await createMint(provider);
     opt_reward_mint = await createMint(provider);
     senderToken = await createAssociatedTokenAccount(provider, mint, sender.publicKey);
     await mintTo(provider, mint, senderToken, Number(senderTokenAmount));
   });
-  
+
   program.addEventListener("CreateStreamEvent", (event, slot) => {
-    console.log("CreateStreamEvent stream: " + event["stream"])
-    console.log("CreateStreamEvent amount: " + event["amount"])
-    console.log("CreateStreamEvent slot: " + slot)
+    console.log("CreateStreamEvent stream: " + event["stream"]);
+    console.log("CreateStreamEvent amount: " + event["amount"]);
+    console.log("CreateStreamEvent slot: " + slot);
   });
 
   it("Creates a prepaid stream", async () => {
@@ -71,34 +111,34 @@ describe("superstream", () => {
     const [streamPublicKey] = getStreamPublicKey(program.programId, seed, mint, name);
     const escrowToken = await createAssociatedTokenAccount(provider, mint, streamPublicKey);
     const [activityPublicKey] = getActivityPublicKey(program.programId, seed, mint, name);
+    const [distributorPublicKey, distributorBump] = getDistributorPublicKey(
+      program.programId,
+      seed,
+      activityPublicKey,
+      name,
+    );
+    const [rewardEscrowToken] = await createAssociatedTokenAccount(provider, mint, distributorPublicKey);
     const startAt = Math.floor(Date.now() / 1000);
     const secsInAYear = 365 * 24 * 60 * 60;
     const endsAt = startAt + secsInAYear;
     let senderTokenAccount = await fetchTokenAccount(senderToken);
-    var previousAmount = senderTokenAccount.amount
-    console.log("senderTokenAccount.amount: "+senderTokenAccount.amount)
+    const previousAmount = senderTokenAccount.amount;
+    console.log("senderTokenAccount.amount: " + senderTokenAccount.amount);
 
-    var sig = await program.methods
-    .createActivity(
-      seed,
-      name,
-      new BN(0),
-      new BN(endsAt),
-      new BN(100000000),
-      new BN(1000),
-    )
-    .accounts({
-      activity: activityPublicKey,
-      creator: sender.publicKey,
-      stakeMint: mint,
-      rewardMint:reward_mint,
-      optRewardMint:opt_reward_mint,
-      systemProgram: web3.SystemProgram.programId,
-    })
-    .rpc();
-  console.log("createActivity sig is "+sig)
+    let sig = await program.methods
+      .createActivity(seed, name, new BN(0), new BN(endsAt), new BN(100000000), new BN(1000), new BN(1000), new BN(0))
+      .accounts({
+        activity: activityPublicKey,
+        creator: sender.publicKey,
+        stakeMint: mint,
+        rewardMint: reward_mint,
+        optRewardMint: opt_reward_mint,
+        systemProgram: web3.SystemProgram.programId,
+      })
+      .rpc();
+    console.log("createActivity sig is " + sig);
 
-    var sig = await program.methods
+    sig = await program.methods
       .createPrepaid(
         seed,
         name,
@@ -129,30 +169,88 @@ describe("superstream", () => {
         systemProgram: web3.SystemProgram.programId,
       })
       .rpc();
-    console.log("createPrepaid sig is "+sig)
-    console.log("startAt is "+startAt + "  endsAt is "+endsAt)
-//  await sleep(49000);
-//  await  provider.connection.getTransaction(sig, new web3.GetTransactionConfig{}).then((value) => {
-//       console.log("txObj: "+value);
-//       console.log("txObj: "+value?.meta?.logMessages);
-//       var logs = value?.meta?.logMessages
-//       logs.forEach((element,i) => {
-//         console.log("log "+ i + " : "+element)
-//       });
-//     });
+    console.log("createPrepaid sig is " + sig);
+    console.log("startAt is " + startAt + "  endsAt is " + endsAt);
+    //  await sleep(49000);
+    //  await  provider.connection.getTransaction(sig, new web3.GetTransactionConfig{}).then((value) => {
+    //       console.log("txObj: "+value);
+    //       console.log("txObj: "+value?.meta?.logMessages);
+    //       var logs = value?.meta?.logMessages
+    //       logs.forEach((element,i) => {
+    //         console.log("log "+ i + " : "+element)
+    //       });
+    //     });
     await sleep(4000);
     const streamAccount = await program.account.stream.fetch(streamPublicKey);
-    console.log("---streamAccount.bump: "+ streamAccount.bump+" initialAmount: "+streamAccount.initialAmount+ " endsAt: "+ streamAccount.endsAt);
+    console.log(
+      "---streamAccount.bump: " +
+        streamAccount.bump +
+        " initialAmount: " +
+        streamAccount.initialAmount +
+        " endsAt: " +
+        streamAccount.endsAt,
+    );
     const activityAccount = await program.account.activity.fetch(activityPublicKey);
-    console.log("---activityAccount.bump: "+ activityAccount.bump+" minAmount: "+activityAccount.minAmount+ " endsAt: "+ streamAccount.endsAt);
+    console.log(
+      "---activityAccount.bump: " +
+        activityAccount.bump +
+        " minAmount: " +
+        activityAccount.minAmount +
+        " endsAt: " +
+        streamAccount.endsAt,
+    );
     senderTokenAccount = await fetchTokenAccount(senderToken);
-    senderTokenAmount = senderTokenAccount.amount
-    console.log("updated senderTokenAmount after createPrepaid is "+senderTokenAmount)
+    senderTokenAmount = senderTokenAccount.amount;
+    console.log("updated senderTokenAmount after createPrepaid is " + senderTokenAmount);
     approximatelyEqualBN(senderTokenAccount.amount, new BN(previousAmount - 1000 - secsInAYear * 10));
     let recipientTokenAccount = await fetchTokenAccount(recipientToken);
     strictEqualBN(recipientTokenAccount.amount, new BN(0));
 
-    // await sleep(4000);
+    const kpOne = web3.Keypair.generate();
+    const kpTwo = web3.Keypair.generate();
+    const kpThree = web3.Keypair.generate();
+
+    const claimers = [
+      {
+        pubKey: sender.publicKey,
+        amount: 10,
+      },
+      {
+        pubKey: kpOne.publicKey,
+        amount: 5,
+      },
+      {
+        pubKey: kpTwo.publicKey,
+        amount: 15,
+      },
+      {
+        pubKey: kpThree.publicKey,
+        amount: 20,
+      },
+    ];
+
+    const index = 0;
+    const leaves = claimersToLeaves(claimers);
+    const merkleTree = new MerkleTree(leaves);
+    const root = merkleTree.root();
+    let proof = getProof(merkleTree, index);
+
+    sig = await program.methods
+      .createDistributor(distributorBump, root.hash, new BN(1000))
+      .accounts({
+        distributor: distributorPublicKey,
+        activity: activityPublicKey,
+        mint: mint,
+        creator: sender.publicKey,
+        senderToken: senderToken,
+        rewardEscrowToken: rewardEscrowToken,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: web3.SystemProgram.programId,
+      })
+      .rpc();
+    console.log("createActivity sig is " + sig);
+
+    await sleep(4000);
     const diffOnWithdraw = Math.floor(Date.now() / 1000) - startAt;
 
     await program.methods
@@ -166,7 +264,7 @@ describe("superstream", () => {
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .rpc();
-      
+
     recipientTokenAccount = await fetchTokenAccount(recipientToken);
     approximatelyEqualBN(recipientTokenAccount.amount, new BN(1000 + diffOnWithdraw * 10));
 
@@ -184,13 +282,13 @@ describe("superstream", () => {
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .rpc();
-    console.log("cancel sig is "+sig)
+    console.log("cancel sig is " + sig);
 
     const diffOnCancel = Math.floor(Date.now() / 1000) - startAt;
 
     senderTokenAccount = await fetchTokenAccount(senderToken);
-    senderTokenAmount = senderTokenAccount.amount
-    console.log("updated senderTokenAmount after cancel is "+senderTokenAmount)
+    senderTokenAmount = senderTokenAccount.amount;
+    console.log("updated senderTokenAmount after cancel is " + senderTokenAmount);
     approximatelyEqualBN(senderTokenAccount.amount, new BN(1e10 - 1000 - diffOnCancel * 10));
     recipientTokenAccount = await fetchTokenAccount(recipientToken);
     approximatelyEqualBN(recipientTokenAccount.amount, new BN(1000 + diffOnCancel * 10));
@@ -210,8 +308,8 @@ describe("superstream", () => {
       .rpc();
 
     senderTokenAccount = await fetchTokenAccount(senderToken);
-    senderTokenAmount = senderTokenAccount.amount
-    console.log("updated senderTokenAmount after withdraw is "+senderTokenAmount)
+    senderTokenAmount = senderTokenAccount.amount;
+    console.log("updated senderTokenAmount after withdraw is " + senderTokenAmount);
     approximatelyEqualBN(senderTokenAmount, new BN(1e10 - 1000 - diffOnCancel * 10));
     recipientTokenAccount = await fetchTokenAccount(recipientToken);
     approximatelyEqualBN(recipientTokenAccount.amount, new BN(1000 + diffOnCancel * 10));
@@ -358,7 +456,7 @@ describe("superstream", () => {
       .rpc();
 
     senderTokenAccount = await fetchTokenAccount(senderToken);
-    console.log("2222222 senderTokenAccount.amount: "+senderTokenAccount.amount)
+    console.log("2222222 senderTokenAccount.amount: " + senderTokenAccount.amount);
     strictEqualBN(senderTokenAccount.amount, senderTokenAmount.sub(new BN(1e7)));
     recipientTokenAccount = await fetchTokenAccount(recipientToken);
     approximatelyEqualBN(recipientTokenAccount.amount, new BN(1000 + diffOnWithdraw * 10));
@@ -464,6 +562,18 @@ function getActivityPublicKey(
 ): [web3.PublicKey, number] {
   return anchorUtils.publicKey.findProgramAddressSync(
     [Buffer.from(ACTIVITY_ACCOUNT_SEED), seed.toBuffer("le", 8), mint.toBuffer(), Buffer.from(name)],
+    programId,
+  );
+}
+
+function getDistributorPublicKey(
+  programId: web3.PublicKey,
+  seed: BN,
+  mint: web3.PublicKey,
+  name: string,
+): [web3.PublicKey, number] {
+  return anchorUtils.publicKey.findProgramAddressSync(
+    [Buffer.from(DISTRIBUTOR_ACCOUNT_SEED), seed.toBuffer("le", 8), mint.toBuffer(), Buffer.from(name)],
     programId,
   );
 }
