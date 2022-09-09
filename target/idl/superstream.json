@@ -469,7 +469,7 @@
           "isSigner": false
         },
         {
-          "name": "recipentTokens",
+          "name": "recipentToken",
           "isMut": true,
           "isSigner": false
         },
@@ -479,7 +479,7 @@
           "isSigner": true
         },
         {
-          "name": "rewardMint",
+          "name": "mint",
           "isMut": false,
           "isSigner": false,
           "docs": [

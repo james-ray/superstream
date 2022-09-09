@@ -469,7 +469,7 @@ export type Superstream = {
           "isSigner": false
         },
         {
-          "name": "recipentTokens",
+          "name": "recipentToken",
           "isMut": true,
           "isSigner": false
         },
@@ -479,7 +479,7 @@ export type Superstream = {
           "isSigner": true
         },
         {
-          "name": "rewardMint",
+          "name": "mint",
           "isMut": false,
           "isSigner": false,
           "docs": [
@@ -2342,7 +2342,7 @@ export const IDL: Superstream = {
           "isSigner": false
         },
         {
-          "name": "recipentTokens",
+          "name": "recipentToken",
           "isMut": true,
           "isSigner": false
         },
@@ -2352,7 +2352,7 @@ export const IDL: Superstream = {
           "isSigner": true
         },
         {
-          "name": "rewardMint",
+          "name": "mint",
           "isMut": false,
           "isSigner": false,
           "docs": [

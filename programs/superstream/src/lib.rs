@@ -307,7 +307,7 @@ pub mod superstream {
             return Err(StreamError::MaxClaim.into());
         }
 
-        if distributor.mint.key() != ctx.accounts.recipent_tokens.mint.key() {
+        if distributor.mint.key() != ctx.accounts.mint.key() {
             return Err(StreamError::InvalidRecipient.into());
         }
         
@@ -322,7 +322,7 @@ pub mod superstream {
             return Err(StreamError::InvalidMerkleProof.into());
         }
 
-        if ctx.accounts.recipent_tokens.owner != claimer.key() {
+        if ctx.accounts.recipent_token.owner != claimer.key() {
             return Err(StreamError::InvalidOwner.into());
         }
 
@@ -341,7 +341,7 @@ pub mod superstream {
                 ctx.accounts.token_program.to_account_info(),
                 token::Transfer {
                     from: ctx.accounts.escrow_token.to_account_info(),
-                    to: ctx.accounts.recipent_tokens.to_account_info(),
+                    to: ctx.accounts.recipent_token.to_account_info(),
                     authority: ctx.accounts.distributor.to_account_info(),
                 },
             )
@@ -703,25 +703,30 @@ pub struct NewDistributor<'info> {
 
 #[derive(Accounts)]
 pub struct Claim<'info> {
-    #[account(mut)] //state for account
+    #[account(mut, has_one = mint)] //state for account
     pub distributor: Account<'info, Distributor>,
 
     #[account(
         mut,
         constraint =
-            escrow_token.mint == reward_mint.key()
+            escrow_token.mint == mint.key()
             && escrow_token.owner == distributor.key(),
     )]
     pub escrow_token: Box<Account<'info, TokenAccount>>,
     
-    #[account(mut)]
-    pub recipent_tokens: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        constraint =
+            recipent_token.mint == mint.key()
+            && recipent_token.owner == claimer.key(),
+    )]
+    pub recipent_token: Account<'info, TokenAccount>,
 
     #[account(mut)]
     pub claimer: Signer<'info>,
 
     /// SPL token mint account.
-    pub reward_mint: Box<Account<'info, Mint>>,
+    pub mint: Box<Account<'info, Mint>>,
 
     #[account(
         init, 

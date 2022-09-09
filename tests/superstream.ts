@@ -11,6 +11,7 @@ import {
   web3,
   workspace,
 } from "@project-serum/anchor";
+import * as borsh from "@project-serum/borsh";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   createAssociatedTokenAccountInstruction,
@@ -29,6 +30,7 @@ import { MerkleTree } from "./scripts/merkle_tree";
 const STREAM_ACCOUNT_SEED = "stream";
 const ACTIVITY_ACCOUNT_SEED = "activity";
 const DISTRIBUTOR_ACCOUNT_SEED = "distributor";
+const STATUS_ACCOUNT_SEED = "status";
 
 export class Claimer {
   pubKey!: web3.PublicKey;
@@ -111,13 +113,8 @@ describe("superstream", () => {
     const [streamPublicKey] = getStreamPublicKey(program.programId, seed, mint, name);
     const escrowToken = await createAssociatedTokenAccount(provider, mint, streamPublicKey);
     const [activityPublicKey] = getActivityPublicKey(program.programId, seed, mint, name);
-    const [distributorPublicKey, distributorBump] = getDistributorPublicKey(
-      program.programId,
-      seed,
-      activityPublicKey,
-      name,
-    );
-    const [rewardEscrowToken] = await createAssociatedTokenAccount(provider, mint, distributorPublicKey);
+    const [distributorPublicKey, distributorBump] = getDistributorPublicKey(program.programId, activityPublicKey, mint);
+    const rewardEscrowToken = await createAssociatedTokenAccount(provider, mint, distributorPublicKey);
     const startAt = Math.floor(Date.now() / 1000);
     const secsInAYear = 365 * 24 * 60 * 60;
     const endsAt = startAt + secsInAYear;
@@ -212,7 +209,7 @@ describe("superstream", () => {
 
     const claimers = [
       {
-        pubKey: sender.publicKey,
+        pubKey: recipient.publicKey,
         amount: 10,
       },
       {
@@ -234,9 +231,11 @@ describe("superstream", () => {
     const merkleTree = new MerkleTree(leaves);
     const root = merkleTree.root();
     let proof = getProof(merkleTree, index);
+    const root1 = root.hash as Uint8Array;
+    const root2 = Array.from(root1);
 
     sig = await program.methods
-      .createDistributor(distributorBump, root.hash, new BN(1000))
+      .createDistributor(distributorBump, root2, new BN(1000))
       .accounts({
         distributor: distributorPublicKey,
         activity: activityPublicKey,
@@ -248,7 +247,29 @@ describe("superstream", () => {
         systemProgram: web3.SystemProgram.programId,
       })
       .rpc();
-    console.log("createActivity sig is " + sig);
+    console.log("createDistributor sig is " + sig);
+
+    const [statusAddress, _statusBump] = await getStatusPublicKey(
+      distributorPublicKey,
+      recipient.publicKey,
+      program.programId,
+    );
+
+    sig = await program.methods
+      .claim(_statusBump, new BN(index), new BN(10), proof)
+      .accounts({
+        distributor: distributorPublicKey,
+        escrowToken: rewardEscrowToken,
+        recipentToken: recipientToken,
+        claimer: recipient.publicKey,
+        mint: mint,
+        status: statusAddress,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: web3.SystemProgram.programId,
+      })
+      .signers([recipient])
+      .rpc();
+    console.log("claim sig is " + sig);
 
     await sleep(4000);
     const diffOnWithdraw = Math.floor(Date.now() / 1000) - startAt;
@@ -568,12 +589,22 @@ function getActivityPublicKey(
 
 function getDistributorPublicKey(
   programId: web3.PublicKey,
-  seed: BN,
+  activity: web3.PublicKey,
   mint: web3.PublicKey,
-  name: string,
 ): [web3.PublicKey, number] {
   return anchorUtils.publicKey.findProgramAddressSync(
-    [Buffer.from(DISTRIBUTOR_ACCOUNT_SEED), seed.toBuffer("le", 8), mint.toBuffer(), Buffer.from(name)],
+    [Buffer.from(DISTRIBUTOR_ACCOUNT_SEED), activity.toBuffer(), mint.toBuffer()],
+    programId,
+  );
+}
+
+function getStatusPublicKey(
+  programId: web3.PublicKey,
+  distributor: web3.PublicKey,
+  claimer: web3.PublicKey,
+): [web3.PublicKey, number] {
+  return anchorUtils.publicKey.findProgramAddressSync(
+    [Buffer.from(STATUS_ACCOUNT_SEED), distributor.toBuffer(), claimer.toBuffer()],
     programId,
   );
 }
