@@ -398,7 +398,10 @@ export type Superstream = {
         {
           "name": "creator",
           "isMut": true,
-          "isSigner": true
+          "isSigner": true,
+          "docs": [
+            "Stream sender wallet."
+          ]
         },
         {
           "name": "senderToken",
@@ -2271,7 +2274,10 @@ export const IDL: Superstream = {
         {
           "name": "creator",
           "isMut": true,
-          "isSigner": true
+          "isSigner": true,
+          "docs": [
+            "Stream sender wallet."
+          ]
         },
         {
           "name": "senderToken",

@@ -649,7 +649,7 @@ pub struct CreateActivity<'info> {
     pub reward_mint: Box<Account<'info, Mint>>,
 
      /// SPL token mint account.
-     pub opt_reward_mint: Box<Account<'info, Mint>>,
+    pub opt_reward_mint: Box<Account<'info, Mint>>,
     
     /// Solana system program.
     pub system_program: Program<'info, System>,
@@ -660,7 +660,7 @@ pub struct NewDistributor<'info> {
     #[account(
         init, 
         payer = creator, 
-        space = 9000,     //TODO: implement space()
+        space = 3000,     //TODO: implement space()
         seeds = [
             b"Distributor".as_ref(),
             activity.key().to_bytes().as_ref(),
@@ -672,6 +672,7 @@ pub struct NewDistributor<'info> {
 
     pub activity: Account<'info, Activity>,
 
+    /// Stream sender wallet.
     #[account(mut)]
     pub creator: Signer<'info>,
 

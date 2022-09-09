@@ -107,10 +107,10 @@ impl Activity {
     const BASE_LENGTH: usize = ANCHOR_DISCRIMINATOR_LENGTH
         + 1 * BOOL_LENGTH       // is_active - 9
         + 4 * PUBLIC_KEY_LENGTH // creator, stake_mint, reward_mint, opt_reward_mint - 137
-        + 5 * U64_LENGTH        // created_at, starts_at, ends_at, reward_expires_at, duration, flow_rate - 185
-        + 1 * U64_LENGTH        // min_amount - 193
-        + 1 * U64_LENGTH        // seed - 201
-        + 1 * U8_LENGTH         // bump - 202
+        + 6 * U64_LENGTH        // created_at, starts_at, ends_at, reward_expires_at, duration, flow_rate - 188
+        + 1 * U64_LENGTH        // min_amount - 196
+        + 1 * U64_LENGTH        // seed - 204
+        + 1 * U8_LENGTH         // bump - 205
     ;
 
     pub fn space(name: &str) -> usize {

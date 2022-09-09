@@ -398,7 +398,10 @@
         {
           "name": "creator",
           "isMut": true,
-          "isSigner": true
+          "isSigner": true,
+          "docs": [
+            "Stream sender wallet."
+          ]
         },
         {
           "name": "senderToken",
@@ -1868,5 +1871,8 @@
       "name": "MaxClaim",
       "msg": "Maximum claim amount"
     }
-  ]
+  ],
+  "metadata": {
+    "address": "89XSrErdZFx8MpyohHFEievS7qqHDn9bZh33tV4xbz3K"
+  }
 }
