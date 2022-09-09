@@ -532,6 +532,55 @@
       ]
     },
     {
+      "name": "recycleReward",
+      "accounts": [
+        {
+          "name": "distributor",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowToken",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "recipentToken",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "sender",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "mint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "SPL token mint account."
+          ]
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "bump",
+          "type": "u8"
+        }
+      ]
+    },
+    {
       "name": "cancel",
       "docs": [
         "Cancel a stream.",

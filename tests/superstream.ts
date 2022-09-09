@@ -273,11 +273,29 @@ describe("superstream", () => {
         systemProgram: web3.SystemProgram.programId,
       })
       .signers([recipient])
-      .rpc()
-      .catch((error) => console.error(error));
+      .rpc();
+    //.catch((error) => console.error(error));
     console.log("claim sig is " + sig);
 
-    await sleep(4000);
+    await sleep(1000);
+
+    sig = await program.methods
+      .claim(_statusBump, new BN(index), new BN(10), proof)
+      .accounts({
+        distributor: distributorPublicKey,
+        escrowToken: rewardEscrowToken,
+        recipentToken: recipientToken,
+        claimer: recipient.publicKey,
+        mint: mint,
+        status: statusAddress,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: web3.SystemProgram.programId,
+      })
+      .signers([recipient])
+      .rpc();
+    //.catch((error) => console.error(error));
+    console.log("claim sig 222 is " + sig);
+
     const diffOnWithdraw = Math.floor(Date.now() / 1000) - startAt;
 
     await program.methods

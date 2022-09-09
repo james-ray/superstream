@@ -302,13 +302,13 @@ pub mod superstream {
         //Check claim status
         let claimer = &ctx.accounts.claimer;
         let status = &mut ctx.accounts.status;
-        let distributor = &ctx.accounts.distributor;
+        let distributor = &mut ctx.accounts.distributor;
 
         if status.is_claimed {
             return Err(StreamError::AlreadyClaimed.into());
         }
 
-        if distributor.total_claimed < amount {
+        if distributor.total_supply < amount {
             return Err(StreamError::MaxClaim.into());
         }
 
@@ -327,16 +327,17 @@ pub mod superstream {
             return Err(StreamError::InvalidMerkleProof.into());
         }
 
-        if ctx.accounts.recipent_token.owner != claimer.key() {
-            return Err(StreamError::InvalidOwner.into());
-        }
+        // if ctx.accounts.recipent_token.owner != claimer.key() {
+        //     return Err(StreamError::InvalidOwner.into());
+        // }
 
         //Mark claimed and send token
         status.amount = amount;
         status.is_claimed = true;
         status.claimer = claimer.key();
+        distributor.total_claimed = distributor.total_claimed + amount;
         let seeds  = [ 
-            b"Distributor".as_ref(), 
+            DISTRIBUTOR_ACCOUNT_SEED.as_ref(), 
             &distributor.activity_key.to_bytes(), 
             &distributor.mint.to_bytes(), 
             &[ctx.accounts.distributor.bump],
@@ -357,6 +358,41 @@ pub mod superstream {
         Ok(())
     }
     
+    pub fn recycle_reward(ctx: Context<RecycleReward>,  _bump: u8) -> Result<()> {
+        //Check claim status
+        //let sender = &ctx.accounts.sender;
+        let distributor = &ctx.accounts.distributor;
+       
+        if distributor.total_claimed >= distributor.total_supply {
+            return Err(StreamError::MaxClaim.into());
+        }
+        let recycle_amount = distributor.total_supply - distributor.total_claimed;
+        // if distributor.mint.key() != ctx.accounts.mint.key() {
+        //     return Err(StreamError::InvalidRecipient.into());
+        // }
+
+        let seeds  = [ 
+            DISTRIBUTOR_ACCOUNT_SEED.as_ref(), 
+            &distributor.activity_key.to_bytes(), 
+            &distributor.mint.to_bytes(), 
+            &[ctx.accounts.distributor.bump],
+            ];
+        token::transfer(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                token::Transfer {
+                    from: ctx.accounts.escrow_token.to_account_info(),
+                    to: ctx.accounts.recipent_token.to_account_info(),
+                    authority: ctx.accounts.distributor.to_account_info(),
+                },
+            )
+            .with_signer(&[&seeds[..]]),
+            recycle_amount,
+        )?;
+
+        Ok(())
+    }
+
     /// Cancel a stream.
     ///
     /// # Arguments
