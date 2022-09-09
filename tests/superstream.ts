@@ -257,7 +257,7 @@ describe("superstream", () => {
       recipient.publicKey,
     );
     await sleep(2000);
-    const escrowRewardTokenAccount = await fetchTokenAccount(rewardEscrowToken);
+    let escrowRewardTokenAccount = await fetchTokenAccount(rewardEscrowToken);
     console.log("escrowRewardTokenAccount.amount: " + escrowRewardTokenAccount.amount);
 
     sig = await program.methods
@@ -278,8 +278,10 @@ describe("superstream", () => {
     console.log("claim sig is " + sig);
 
     await sleep(1000);
+    escrowRewardTokenAccount = await fetchTokenAccount(rewardEscrowToken);
+    console.log("after claim, escrowRewardTokenAccount.amount: " + escrowRewardTokenAccount.amount);
 
-    sig = await program.methods
+    await program.methods
       .claim(_statusBump, new BN(index), new BN(10), proof)
       .accounts({
         distributor: distributorPublicKey,
@@ -292,8 +294,8 @@ describe("superstream", () => {
         systemProgram: web3.SystemProgram.programId,
       })
       .signers([recipient])
-      .rpc();
-    //.catch((error) => console.error(error));
+      .rpc()
+      .catch((error) => console.error(error));
     console.log("claim sig 222 is " + sig);
 
     const diffOnWithdraw = Math.floor(Date.now() / 1000) - startAt;

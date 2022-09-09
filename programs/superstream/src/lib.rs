@@ -303,7 +303,7 @@ pub mod superstream {
         let claimer = &ctx.accounts.claimer;
         let status = &mut ctx.accounts.status;
         let distributor = &mut ctx.accounts.distributor;
-
+        msg!("in claim,  status.is_claimed {}", status.is_claimed);
         if status.is_claimed {
             return Err(StreamError::AlreadyClaimed.into());
         }
@@ -361,7 +361,7 @@ pub mod superstream {
     pub fn recycle_reward(ctx: Context<RecycleReward>,  _bump: u8) -> Result<()> {
         //Check claim status
         //let sender = &ctx.accounts.sender;
-        let distributor = &ctx.accounts.distributor;
+        let distributor = &mut ctx.accounts.distributor;
        
         if distributor.total_claimed >= distributor.total_supply {
             return Err(StreamError::MaxClaim.into());
@@ -370,6 +370,7 @@ pub mod superstream {
         // if distributor.mint.key() != ctx.accounts.mint.key() {
         //     return Err(StreamError::InvalidRecipient.into());
         // }
+        distributor.total_claimed = distributor.total_supply;
 
         let seeds  = [ 
             DISTRIBUTOR_ACCOUNT_SEED.as_ref(), 
