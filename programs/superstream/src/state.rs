@@ -30,6 +30,8 @@ pub struct Distributor {
 
     pub activity_key: Pubkey,
 
+    pub creater_key: Pubkey,
+
     pub bump: u8,
 
     pub root: [u8;32],

@@ -1107,6 +1107,10 @@
             "type": "publicKey"
           },
           {
+            "name": "createrKey",
+            "type": "publicKey"
+          },
+          {
             "name": "bump",
             "type": "u8"
           },

@@ -1107,6 +1107,10 @@ export type Superstream = {
             "type": "publicKey"
           },
           {
+            "name": "createrKey",
+            "type": "publicKey"
+          },
+          {
             "name": "bump",
             "type": "u8"
           },
@@ -2980,6 +2984,10 @@ export const IDL: Superstream = {
           },
           {
             "name": "activityKey",
+            "type": "publicKey"
+          },
+          {
+            "name": "createrKey",
             "type": "publicKey"
           },
           {

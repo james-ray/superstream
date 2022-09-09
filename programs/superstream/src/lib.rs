@@ -284,6 +284,7 @@ pub mod superstream {
         distributor.activity_key = ctx.accounts.activity.key();
         distributor.bump = _bump;
         distributor.root = root;
+        distributor.creater_key = ctx.accounts.creator.key();
         distributor.total_claimed = 0;
         distributor.total_supply = total_supply;
         distributor.mint = ctx.accounts.mint.key();
@@ -708,6 +709,50 @@ pub struct NewDistributor<'info> {
 
 #[derive(Accounts)]
 pub struct Claim<'info> {
+    #[account(mut, has_one = mint)] //state for account
+    pub distributor: Account<'info, Distributor>,
+
+    #[account(
+        mut,
+        constraint =
+            escrow_token.mint == mint.key()
+            && escrow_token.owner == distributor.key(),
+    )]
+    pub escrow_token: Box<Account<'info, TokenAccount>>,
+    
+    #[account(
+        mut,
+        constraint =
+            recipent_token.mint == mint.key()
+            && recipent_token.owner == claimer.key(),
+    )]
+    pub recipent_token: Account<'info, TokenAccount>,
+
+    #[account(mut)]
+    pub claimer: Signer<'info>,
+
+    /// SPL token mint account.
+    pub mint: Box<Account<'info, Mint>>,
+
+    #[account(
+        init, 
+        payer = claimer, 
+        seeds = [
+            STATUS_ACCOUNT_SEED.as_ref(), 
+            distributor.to_account_info().key().to_bytes().as_ref(),
+            claimer.key().to_bytes().as_ref(),
+            ], 
+        bump, 
+        space = 50)]
+    pub status: Account<'info, Status>,
+
+    pub token_program: Program<'info, Token>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct RecycleReward<'info> {
     #[account(mut, has_one = mint)] //state for account
     pub distributor: Account<'info, Distributor>,
 

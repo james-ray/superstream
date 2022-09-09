@@ -250,9 +250,9 @@ describe("superstream", () => {
     console.log("createDistributor sig is " + sig);
 
     const [statusAddress, _statusBump] = getStatusPublicKey(
+      program.programId,
       distributorPublicKey,
       recipient.publicKey,
-      program.programId,
     );
 
     sig = await program.methods
