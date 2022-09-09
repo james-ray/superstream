@@ -768,27 +768,15 @@ pub struct RecycleReward<'info> {
         mut,
         constraint =
             recipent_token.mint == mint.key()
-            && recipent_token.owner == claimer.key(),
+            && recipent_token.owner == sender.key(),
     )]
     pub recipent_token: Account<'info, TokenAccount>,
 
     #[account(mut)]
-    pub claimer: Signer<'info>,
+    pub sender: Signer<'info>,
 
     /// SPL token mint account.
     pub mint: Box<Account<'info, Mint>>,
-
-    #[account(
-        init, 
-        payer = claimer, 
-        seeds = [
-            STATUS_ACCOUNT_SEED.as_ref(), 
-            distributor.to_account_info().key().to_bytes().as_ref(),
-            claimer.key().to_bytes().as_ref(),
-            ], 
-        bump, 
-        space = 50)]
-    pub status: Account<'info, Status>,
 
     pub token_program: Program<'info, Token>,
 

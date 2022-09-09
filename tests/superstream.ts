@@ -26,6 +26,7 @@ import keccak256 = require("keccak256");
 
 import { Superstream } from "../target/types/superstream";
 import { MerkleTree } from "./scripts/merkle_tree";
+import { getAirdrop } from "./scripts/distribute.service";
 
 const STREAM_ACCOUNT_SEED = "stream";
 const ACTIVITY_ACCOUNT_SEED = "activity";
@@ -106,6 +107,7 @@ describe("superstream", () => {
 
   it("Creates a prepaid stream", async () => {
     const recipient = web3.Keypair.generate();
+    await getAirdrop(recipient.publicKey);
     const recipientToken = await createAssociatedTokenAccount(provider, mint, recipient.publicKey);
 
     const seed = new BN(0);
@@ -254,6 +256,9 @@ describe("superstream", () => {
       distributorPublicKey,
       recipient.publicKey,
     );
+    await sleep(2000);
+    const escrowRewardTokenAccount = await fetchTokenAccount(rewardEscrowToken);
+    console.log("escrowRewardTokenAccount.amount: " + escrowRewardTokenAccount.amount);
 
     sig = await program.methods
       .claim(_statusBump, new BN(index), new BN(10), proof)
@@ -268,7 +273,8 @@ describe("superstream", () => {
         systemProgram: web3.SystemProgram.programId,
       })
       .signers([recipient])
-      .rpc();
+      .rpc()
+      .catch((error) => console.error(error));
     console.log("claim sig is " + sig);
 
     await sleep(4000);
