@@ -108,6 +108,10 @@ pub const STREAM_ACCOUNT_SEED: &[u8] = b"stream";
 
 pub const ACTIVITY_ACCOUNT_SEED: &[u8] = b"activity";
 
+pub const DISTRIBUTOR_ACCOUNT_SEED: &[u8] = b"distributor";
+
+pub const STATUS_ACCOUNT_SEED: &[u8] = b"status";
+
 #[event]
 pub struct CreateStreamEvent{
     sender: Pubkey,
@@ -662,7 +666,7 @@ pub struct NewDistributor<'info> {
         payer = creator, 
         space = 3000,     //TODO: implement space()
         seeds = [
-            b"Distributor".as_ref(),
+            DISTRIBUTOR_ACCOUNT_SEED.as_ref(),
             activity.key().to_bytes().as_ref(),
             mint.key().to_bytes().as_ref()
             ], 
@@ -733,7 +737,7 @@ pub struct Claim<'info> {
         init, 
         payer = claimer, 
         seeds = [
-            b"Status".as_ref(), 
+            STATUS_ACCOUNT_SEED.as_ref(), 
             distributor.to_account_info().key().to_bytes().as_ref(),
             claimer.key().to_bytes().as_ref(),
             ], 

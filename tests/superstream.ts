@@ -128,7 +128,7 @@ describe("superstream", () => {
         activity: activityPublicKey,
         creator: sender.publicKey,
         stakeMint: mint,
-        rewardMint: reward_mint,
+        rewardMint: mint,
         optRewardMint: opt_reward_mint,
         systemProgram: web3.SystemProgram.programId,
       })
