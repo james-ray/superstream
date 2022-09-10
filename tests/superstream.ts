@@ -63,6 +63,10 @@ export function getProof(tree: MerkleTree, index: number): Buffer[] {
   for (let i = 0; i < nodes.length - 1; i++) {
     const proof = currentIndex % 2 == 0 ? nodes[i][currentIndex + 1] : nodes[i][currentIndex - 1];
     currentIndex = (currentIndex - (currentIndex % 2)) / 2;
+    console.log("push proof i=" + i + "   currentIndex=" + currentIndex);
+    proof.hash.forEach((element) => {
+      console.log("ele " + element);
+    });
     proofs.push(proof);
   }
   const buffer: Buffer[] = [];
@@ -234,7 +238,11 @@ describe("superstream", () => {
     const root = merkleTree.root();
     const proof = getProof(merkleTree, index);
     const root1 = root.hash as Uint8Array;
+    console.log("root =");
     const root2 = Array.from(root1);
+    root2.forEach((element) => {
+      console.log("ele " + element);
+    });
 
     sig = await program.methods
       .createDistributor(distributorBump, root2, new BN(1000))
@@ -261,7 +269,7 @@ describe("superstream", () => {
     console.log("escrowRewardTokenAccount.amount: " + escrowRewardTokenAccount.amount);
 
     sig = await program.methods
-      .claim(_statusBump, new BN(index), new BN(10), proof)
+      .claim(new BN(index), new BN(10), proof)
       .accounts({
         distributor: distributorPublicKey,
         escrowToken: rewardEscrowToken,
@@ -274,15 +282,18 @@ describe("superstream", () => {
       })
       .signers([recipient])
       .rpc();
-    //.catch((error) => console.error(error));
+    //  .catch((error) => console.error(error));
     console.log("claim sig is " + sig);
 
     await sleep(1000);
     escrowRewardTokenAccount = await fetchTokenAccount(rewardEscrowToken);
     console.log("after claim, escrowRewardTokenAccount.amount: " + escrowRewardTokenAccount.amount);
+    senderTokenAccount = await fetchTokenAccount(senderToken);
+    senderTokenAmount = senderTokenAccount.amount;
+    console.log("updated senderTokenAmount after claim is " + senderTokenAmount);
 
     await program.methods
-      .claim(_statusBump, new BN(index), new BN(10), proof)
+      .claim(new BN(index), new BN(10), proof)
       .accounts({
         distributor: distributorPublicKey,
         escrowToken: rewardEscrowToken,
@@ -295,8 +306,29 @@ describe("superstream", () => {
       })
       .signers([recipient])
       .rpc()
-      .catch((error) => console.error(error));
+      .catch((error) => console.error(error)); //should fail
     console.log("claim sig 222 is " + sig);
+
+    sig = await program.methods
+      .recycleReward()
+      .accounts({
+        distributor: distributorPublicKey,
+        escrowToken: rewardEscrowToken,
+        recipentToken: senderToken,
+        sender: sender.publicKey,
+        mint: mint,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: web3.SystemProgram.programId,
+      })
+      .rpc();
+    //  .catch((error) => console.error(error));
+    console.log("recycleReward sig is " + sig);
+    await sleep(1000);
+    escrowRewardTokenAccount = await fetchTokenAccount(rewardEscrowToken);
+    console.log("after recycleReward, escrowRewardTokenAccount.amount: " + escrowRewardTokenAccount.amount);
+    senderTokenAccount = await fetchTokenAccount(senderToken);
+    senderTokenAmount = senderTokenAccount.amount;
+    console.log("updated senderTokenAmount after recycleReward is " + senderTokenAmount);
 
     const diffOnWithdraw = Math.floor(Date.now() / 1000) - startAt;
 

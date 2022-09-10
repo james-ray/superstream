@@ -507,10 +507,6 @@ export type Superstream = {
       ],
       "args": [
         {
-          "name": "bump",
-          "type": "u8"
-        },
-        {
           "name": "index",
           "type": "u64"
         },
@@ -573,12 +569,7 @@ export type Superstream = {
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "bump",
-          "type": "u8"
-        }
-      ]
+      "args": []
     },
     {
       "name": "cancel",
@@ -2436,10 +2427,6 @@ export const IDL: Superstream = {
       ],
       "args": [
         {
-          "name": "bump",
-          "type": "u8"
-        },
-        {
           "name": "index",
           "type": "u64"
         },
@@ -2502,12 +2489,7 @@ export const IDL: Superstream = {
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "bump",
-          "type": "u8"
-        }
-      ]
+      "args": []
     },
     {
       "name": "cancel",

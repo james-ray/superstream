@@ -25,7 +25,25 @@ pub(crate) fn verify(proof: Vec<[u8; 32]>, root: [u8; 32], leaf: [u8; 32]) -> bo
             computed_hash =
                 anchor_lang::solana_program::keccak::hashv(&[&proof_element, &computed_hash]).0;
         }
+        let mut i = 0;
+        msg!("proof_element =");
+        while i < 32{
+            msg!("i {} ele {}", i, proof_element[i]);
+            i+=1;
+        }
+        msg!("computed_hash =");
+        i = 0;
+        while i < 32{
+            msg!("i {} computed ele {}", i, computed_hash[i]);
+            i+=1;
+        }
     }
+    let mut i = 0;
+        msg!("root =");
+        while i < 32{
+            msg!("i {} root ele {}", i, root[i]);
+            i+=1;
+        }
     // Check if the computed hash (root) is equal to the provided root
     computed_hash == root
 }

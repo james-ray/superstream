@@ -298,7 +298,7 @@ pub mod superstream {
         )
     }
 
-    pub fn claim(ctx: Context<Claim>,  _bump: u8, index: u64, amount: u64, proof: Vec<[u8; 32]>) -> Result<()> {
+    pub fn claim(ctx: Context<Claim>, index: u64, amount: u64, proof: Vec<[u8; 32]>) -> Result<()> {
         //Check claim status
         let claimer = &ctx.accounts.claimer;
         let status = &mut ctx.accounts.status;
@@ -358,7 +358,7 @@ pub mod superstream {
         Ok(())
     }
     
-    pub fn recycle_reward(ctx: Context<RecycleReward>,  _bump: u8) -> Result<()> {
+    pub fn recycle_reward(ctx: Context<RecycleReward>) -> Result<()> {
         //Check claim status
         //let sender = &ctx.accounts.sender;
         let distributor = &mut ctx.accounts.distributor;
