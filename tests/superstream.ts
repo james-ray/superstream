@@ -93,6 +93,9 @@ describe("superstream", () => {
   let opt_reward_mint = web3.PublicKey.default;
   let senderToken = web3.PublicKey.default;
   let senderTokenAmount = new BN(1e10);
+  const seed = new BN(0);
+  const name = "s1";
+  const [activityPublicKey] = getActivityPublicKey(program.programId, seed, mint, name);
 
   it("Initializes test setup", async () => {
     console.log("111111111 program id is " + program.programId);
@@ -114,22 +117,20 @@ describe("superstream", () => {
     await getAirdrop(recipient.publicKey);
     const recipientToken = await createAssociatedTokenAccount(provider, mint, recipient.publicKey);
 
-    const seed = new BN(0);
-    const name = "s1";
-    const [streamPublicKey] = getStreamPublicKey(program.programId, seed, mint, name);
+    const [streamPublicKey] = getStreamPublicKey(program.programId, activityPublicKey, sender.publicKey, mint, name);
     const escrowToken = await createAssociatedTokenAccount(provider, mint, streamPublicKey);
-    const [activityPublicKey] = getActivityPublicKey(program.programId, seed, mint, name);
     const [distributorPublicKey, distributorBump] = getDistributorPublicKey(program.programId, activityPublicKey, mint);
     const rewardEscrowToken = await createAssociatedTokenAccount(provider, mint, distributorPublicKey);
     const startAt = Math.floor(Date.now() / 1000);
     const secsInAYear = 365 * 24 * 60 * 60;
-    const endsAt = startAt + secsInAYear;
+    const endsAt = startAt + 3; //secsInAYear;
     let senderTokenAccount = await fetchTokenAccount(senderToken);
     const previousAmount = senderTokenAccount.amount;
     console.log("senderTokenAccount.amount: " + senderTokenAccount.amount);
 
+    console.log("activityPublicKey: " + activityPublicKey);
     let sig = await program.methods
-      .createActivity(seed, name, new BN(0), new BN(endsAt), new BN(100000000), new BN(1000), new BN(1000), new BN(0))
+      .createActivity(seed, name, new BN(0), new BN(endsAt), new BN(endsAt), new BN(4), new BN(1000), new BN(0))
       .accounts({
         activity: activityPublicKey,
         creator: sender.publicKey,
@@ -138,16 +139,15 @@ describe("superstream", () => {
         optRewardMint: opt_reward_mint,
         systemProgram: web3.SystemProgram.programId,
       })
-      .rpc();
+      .rpc()
+      .catch((error) => console.error(error));
     console.log("createActivity sig is " + sig);
 
     sig = await program.methods
-      .createPrepaid(
+      .createStream(
         seed,
         name,
         recipient.publicKey,
-        new BN(0),
-        new BN(endsAt),
         new BN(1000),
         new BN(2),
         new BN(20),
@@ -173,6 +173,39 @@ describe("superstream", () => {
       })
       .rpc();
     console.log("createPrepaid sig is " + sig);
+
+    // sig = await program.methods
+    //   .createPrepaid(
+    //     seed,
+    //     name,
+    //     recipient.publicKey,
+    //     new BN(0),
+    //     new BN(endsAt),
+    //     new BN(1000),
+    //     new BN(2),
+    //     new BN(20),
+    //     true,
+    //     new BN(0),
+    //     true,
+    //     new BN(0),
+    //     true,
+    //     new BN(0),
+    //     true,
+    //     new BN(0),
+    //     true,
+    //     new BN(0),
+    //   )
+    //   .accounts({
+    //     stream: streamPublicKey,
+    //     sender: sender.publicKey,
+    //     mint,
+    //     senderToken,
+    //     escrowToken,
+    //     tokenProgram: TOKEN_PROGRAM_ID,
+    //     systemProgram: web3.SystemProgram.programId,
+    //   })
+    //   .rpc();
+    // console.log("createPrepaid sig is " + sig);
     console.log("startAt is " + startAt + "  endsAt is " + endsAt);
     //  await sleep(49000);
     //  await  provider.connection.getTransaction(sig, new web3.GetTransactionConfig{}).then((value) => {
@@ -400,7 +433,7 @@ describe("superstream", () => {
 
     const seed = new BN(0);
     const name = "s2";
-    const [streamPublicKey] = getStreamPublicKey(program.programId, seed, mint, name);
+    const [streamPublicKey] = getStreamPublicKey(program.programId, activityPublicKey, sender.publicKey, mint, name);
     const escrowToken = await createAssociatedTokenAccount(provider, mint, streamPublicKey);
 
     try {
@@ -623,12 +656,13 @@ function approximatelyEqualBN(actual: BN, expected: BN) {
 
 function getStreamPublicKey(
   programId: web3.PublicKey,
-  seed: BN,
+  activity: web3.PublicKey,
   mint: web3.PublicKey,
+  sender: web3.PublicKey,
   name: string,
 ): [web3.PublicKey, number] {
   return anchorUtils.publicKey.findProgramAddressSync(
-    [Buffer.from(STREAM_ACCOUNT_SEED), seed.toBuffer("le", 8), mint.toBuffer(), Buffer.from(name)],
+    [Buffer.from(STREAM_ACCOUNT_SEED), activity.toBuffer(), mint.toBuffer(), sender.toBuffer(), Buffer.from(name)],
     programId,
   );
 }

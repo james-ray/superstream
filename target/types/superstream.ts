@@ -24,6 +24,14 @@ export type Superstream = {
           ]
         },
         {
+          "name": "activity",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Stream sender wallet."
+          ]
+        },
+        {
           "name": "sender",
           "isMut": true,
           "isSigner": true,
@@ -170,6 +178,14 @@ export type Superstream = {
           ]
         },
         {
+          "name": "activity",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Stream sender wallet."
+          ]
+        },
+        {
           "name": "sender",
           "isMut": true,
           "isSigner": true,
@@ -294,6 +310,142 @@ export type Superstream = {
         },
         {
           "name": "topupAmount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "createStream",
+      "accounts": [
+        {
+          "name": "stream",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Stream PDA account. This is initialized by the program."
+          ]
+        },
+        {
+          "name": "activity",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Stream sender wallet."
+          ]
+        },
+        {
+          "name": "sender",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Stream sender wallet."
+          ]
+        },
+        {
+          "name": "mint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "SPL token mint account."
+          ]
+        },
+        {
+          "name": "senderToken",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Associated token account of the sender."
+          ]
+        },
+        {
+          "name": "escrowToken",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Associated token escrow account holding the funds for this stream.",
+            "It does not need to be included in Stream struct, but needs to be sent within the createStream instruction"
+          ]
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "SPL token program."
+          ]
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Solana system program."
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "seed",
+          "type": "u64"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "recipient",
+          "type": "publicKey"
+        },
+        {
+          "name": "initialAmount",
+          "type": "u64"
+        },
+        {
+          "name": "flowInterval",
+          "type": "u64"
+        },
+        {
+          "name": "flowRate",
+          "type": "u64"
+        },
+        {
+          "name": "senderCanCancel",
+          "type": "bool"
+        },
+        {
+          "name": "senderCanCancelAt",
+          "type": "u64"
+        },
+        {
+          "name": "senderCanChangeSender",
+          "type": "bool"
+        },
+        {
+          "name": "senderCanChangeSenderAt",
+          "type": "u64"
+        },
+        {
+          "name": "senderCanPause",
+          "type": "bool"
+        },
+        {
+          "name": "senderCanPauseAt",
+          "type": "u64"
+        },
+        {
+          "name": "recipientCanResumePauseBySender",
+          "type": "bool"
+        },
+        {
+          "name": "recipientCanResumePauseBySenderAt",
+          "type": "u64"
+        },
+        {
+          "name": "anyoneCanWithdrawForRecipient",
+          "type": "bool"
+        },
+        {
+          "name": "anyoneCanWithdrawForRecipientAt",
           "type": "u64"
         }
       ]
@@ -1892,26 +2044,31 @@ export type Superstream = {
     },
     {
       "code": 6040,
+      "name": "ActivityEnded",
+      "msg": "The activity has already ended"
+    },
+    {
+      "code": 6041,
       "name": "WrongRewardMint",
       "msg": "The distributor mint is not reward mint or opt-reward mint"
     },
     {
-      "code": 6041,
+      "code": 6042,
       "name": "AlreadyClaimed",
       "msg": "Already Claimed"
     },
     {
-      "code": 6042,
+      "code": 6043,
       "name": "InvalidMerkleProof",
       "msg": "Invalid Merkle proof"
     },
     {
-      "code": 6043,
+      "code": 6044,
       "name": "InvalidOwner",
       "msg": "Invalid Owner"
     },
     {
-      "code": 6044,
+      "code": 6045,
       "name": "MaxClaim",
       "msg": "Maximum claim amount"
     }
@@ -1944,6 +2101,14 @@ export const IDL: Superstream = {
           ]
         },
         {
+          "name": "activity",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Stream sender wallet."
+          ]
+        },
+        {
           "name": "sender",
           "isMut": true,
           "isSigner": true,
@@ -2090,6 +2255,14 @@ export const IDL: Superstream = {
           ]
         },
         {
+          "name": "activity",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Stream sender wallet."
+          ]
+        },
+        {
           "name": "sender",
           "isMut": true,
           "isSigner": true,
@@ -2214,6 +2387,142 @@ export const IDL: Superstream = {
         },
         {
           "name": "topupAmount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "createStream",
+      "accounts": [
+        {
+          "name": "stream",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Stream PDA account. This is initialized by the program."
+          ]
+        },
+        {
+          "name": "activity",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Stream sender wallet."
+          ]
+        },
+        {
+          "name": "sender",
+          "isMut": true,
+          "isSigner": true,
+          "docs": [
+            "Stream sender wallet."
+          ]
+        },
+        {
+          "name": "mint",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "SPL token mint account."
+          ]
+        },
+        {
+          "name": "senderToken",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Associated token account of the sender."
+          ]
+        },
+        {
+          "name": "escrowToken",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Associated token escrow account holding the funds for this stream.",
+            "It does not need to be included in Stream struct, but needs to be sent within the createStream instruction"
+          ]
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "SPL token program."
+          ]
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Solana system program."
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "seed",
+          "type": "u64"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "recipient",
+          "type": "publicKey"
+        },
+        {
+          "name": "initialAmount",
+          "type": "u64"
+        },
+        {
+          "name": "flowInterval",
+          "type": "u64"
+        },
+        {
+          "name": "flowRate",
+          "type": "u64"
+        },
+        {
+          "name": "senderCanCancel",
+          "type": "bool"
+        },
+        {
+          "name": "senderCanCancelAt",
+          "type": "u64"
+        },
+        {
+          "name": "senderCanChangeSender",
+          "type": "bool"
+        },
+        {
+          "name": "senderCanChangeSenderAt",
+          "type": "u64"
+        },
+        {
+          "name": "senderCanPause",
+          "type": "bool"
+        },
+        {
+          "name": "senderCanPauseAt",
+          "type": "u64"
+        },
+        {
+          "name": "recipientCanResumePauseBySender",
+          "type": "bool"
+        },
+        {
+          "name": "recipientCanResumePauseBySenderAt",
+          "type": "u64"
+        },
+        {
+          "name": "anyoneCanWithdrawForRecipient",
+          "type": "bool"
+        },
+        {
+          "name": "anyoneCanWithdrawForRecipientAt",
           "type": "u64"
         }
       ]
@@ -3812,26 +4121,31 @@ export const IDL: Superstream = {
     },
     {
       "code": 6040,
+      "name": "ActivityEnded",
+      "msg": "The activity has already ended"
+    },
+    {
+      "code": 6041,
       "name": "WrongRewardMint",
       "msg": "The distributor mint is not reward mint or opt-reward mint"
     },
     {
-      "code": 6041,
+      "code": 6042,
       "name": "AlreadyClaimed",
       "msg": "Already Claimed"
     },
     {
-      "code": 6042,
+      "code": 6043,
       "name": "InvalidMerkleProof",
       "msg": "Invalid Merkle proof"
     },
     {
-      "code": 6043,
+      "code": 6044,
       "name": "InvalidOwner",
       "msg": "Invalid Owner"
     },
     {
-      "code": 6044,
+      "code": 6045,
       "name": "MaxClaim",
       "msg": "Maximum claim amount"
     }

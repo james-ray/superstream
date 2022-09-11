@@ -28,6 +28,10 @@ export class MerkleTree {
     }
 
     const leafNodes = hashes.map((hash, i) => {
+      console.log("leafNode i=" + i);
+      hash.forEach((element) => {
+        console.log("ele " + element);
+      });
       return <MerkleNode>{
         row: LEVEL_ARRAY[0],
         index: i,
@@ -50,6 +54,10 @@ export class MerkleTree {
           row: LEVEL_ARRAY[i],
           index: j / 2,
           hash: newHash,
+        });
+        console.log("newHash i=" + i + "j=" + j);
+        newHash.forEach((element) => {
+          console.log("ele " + element);
         });
       }
       this._nodes.push(newNodes);

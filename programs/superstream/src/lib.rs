@@ -246,6 +246,57 @@ pub mod superstream {
         ctx.accounts.transfer_to_escrow(topup_amount)
     }
 
+    pub fn create_stream(
+        mut ctx: Context<Create>,
+        seed: u64,
+        name: String,
+        recipient: Pubkey,
+        initial_amount: u64,
+        flow_interval: u64,
+        flow_rate: u64,
+        sender_can_cancel: bool,
+        sender_can_cancel_at: u64,
+        sender_can_change_sender: bool,
+        sender_can_change_sender_at: u64,
+        sender_can_pause: bool,
+        sender_can_pause_at: u64,
+        recipient_can_resume_pause_by_sender: bool,
+        recipient_can_resume_pause_by_sender_at: u64,
+        anyone_can_withdraw_for_recipient: bool,
+        anyone_can_withdraw_for_recipient_at: u64,
+    ) -> Result<()> {
+        create1(
+            &mut ctx,
+            recipient,
+            name,
+            initial_amount,
+            flow_interval,
+            flow_rate,
+            sender_can_cancel,
+            sender_can_cancel_at,
+            sender_can_change_sender,
+            sender_can_change_sender_at,
+            sender_can_pause,
+            sender_can_pause_at,
+            recipient_can_resume_pause_by_sender,
+            recipient_can_resume_pause_by_sender_at,
+            anyone_can_withdraw_for_recipient,
+            anyone_can_withdraw_for_recipient_at,
+            seed,
+        )?;
+
+        let stream = &mut ctx.accounts.stream;
+        msg!("4444 in create_stream, stream pubkey: {}", stream.key());
+        let prepaid_amount_needed = stream.initialize_prepaid()?;
+        emit!(CreateStreamEvent{
+            sender: ctx.accounts.sender.key(),
+            recipient: recipient.key(),
+            stream: stream.key(),
+            amount: initial_amount,
+        });
+        ctx.accounts.transfer_to_escrow(prepaid_amount_needed)
+    }
+
     pub fn create_activity(
         mut ctx: Context<CreateActivity>,
         seed: u64,
@@ -580,6 +631,71 @@ pub(crate) fn create(
     )
 }
 
+pub(crate) fn create1(
+    ctx: &mut Context<Create>,
+    recipient: Pubkey,
+    name: String,
+    initial_amount: u64,
+    flow_interval: u64,
+    flow_rate: u64,
+    sender_can_cancel: bool,
+    sender_can_cancel_at: u64,
+    sender_can_change_sender: bool,
+    sender_can_change_sender_at: u64,
+    sender_can_pause: bool,
+    sender_can_pause_at: u64,
+    recipient_can_resume_pause_by_sender: bool,
+    recipient_can_resume_pause_by_sender_at: u64,
+    anyone_can_withdraw_for_recipient: bool,
+    anyone_can_withdraw_for_recipient_at: u64,
+    seed: u64,
+) -> Result<()> {
+    let escrow_token_account = &ctx.accounts.escrow_token;
+    require!(
+        is_token_account_rent_exempt(escrow_token_account)?,
+        StreamError::EscrowNotRentExempt,
+    );
+    let activity_account = &ctx.accounts.activity;
+    require!(
+        is_token_account_rent_exempt(activity_account)?,
+        StreamError::EscrowNotRentExempt,
+    );
+    msg!("In fn create!!!");
+    let starts_at = utils::get_current_timestamp()?;
+
+    require!(
+        starts_at <= activity_account.ends_at,
+        StreamError::ActivityEnded,
+    );
+
+    let ends_at = starts_at + flow_interval;
+
+    let stream = &mut ctx.accounts.stream;
+    stream.initialize1(
+        ctx.accounts.mint.key(),
+        ctx.accounts.sender.key(),
+        recipient,
+        name,
+        starts_at,
+        ends_at,
+        initial_amount,
+        activity_account.duration,
+        flow_rate,
+        sender_can_cancel,
+        sender_can_cancel_at,
+        sender_can_change_sender,
+        sender_can_change_sender_at,
+        sender_can_pause,
+        sender_can_pause_at,
+        recipient_can_resume_pause_by_sender,
+        recipient_can_resume_pause_by_sender_at,
+        anyone_can_withdraw_for_recipient,
+        anyone_can_withdraw_for_recipient_at,
+        seed,
+        *ctx.bumps.get("stream").unwrap(),
+    )
+}
+
 pub(crate) fn create_activity_internal(
     ctx: &mut Context<CreateActivity>,
     is_active: bool,
@@ -621,8 +737,9 @@ pub struct Create<'info> {
         init,
         seeds = [
             STREAM_ACCOUNT_SEED,
-            seed.to_le_bytes().as_ref(),
+            activity.key().as_ref(),
             mint.key().as_ref(),
+            sender.key().as_ref(),
             name.as_bytes(),
         ],
         payer = sender,
@@ -630,6 +747,15 @@ pub struct Create<'info> {
         bump,
     )]
     pub stream: Account<'info, Stream>,
+
+    /// Stream sender wallet.
+    #[account(
+        mut,
+        constraint =
+            activity.creator == sender.key() &&
+            activity.stake_mint == mint.key(),
+        )]
+    pub activity: Account<'info, Activity>,
 
     /// Stream sender wallet.
     #[account(mut)]

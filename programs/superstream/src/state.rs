@@ -737,6 +737,109 @@ impl Stream {
         Ok(())
     }
 
+    pub fn initialize1(
+        &mut self,
+        mint: Pubkey,
+        sender: Pubkey,
+        recipient: Pubkey,
+        name: String,
+        starts_at: u64,
+        ends_at: u64,
+        initial_amount: u64,
+        flow_interval: u64,
+        flow_rate: u64,
+        sender_can_cancel: bool,
+        sender_can_cancel_at: u64,
+        sender_can_change_sender: bool,
+        sender_can_change_sender_at: u64,
+        sender_can_pause: bool,
+        sender_can_pause_at: u64,
+        recipient_can_resume_pause_by_sender: bool,
+        recipient_can_resume_pause_by_sender_at: u64,
+        anyone_can_withdraw_for_recipient: bool,
+        anyone_can_withdraw_for_recipient_at: u64,
+        seed: u64,
+        bump: u8,
+    ) -> Result<()> {
+        require!(recipient != Pubkey::default(), StreamError::EmptyRecipient);
+        require!(name.len() >= MIN_STREAM_NAME_LENGTH, StreamError::StreamNameTooShort);
+        require!(name.len() <= MAX_STREAM_NAME_LENGTH, StreamError::StreamNameTooLong);
+        require!(recipient != sender, StreamError::SameSenderAndRecipient);
+        require!(flow_interval > 0, StreamError::ZeroFlowInterval);
+
+
+        let sender_can_cancel_at = if sender_can_cancel {
+            min(sender_can_cancel_at, starts_at)
+        } else {
+            0
+        };
+        let sender_can_change_sender_at = if sender_can_change_sender {
+            min(sender_can_change_sender_at, starts_at)
+        } else {
+            0
+        };
+        let sender_can_pause_at = if sender_can_pause {
+            min(sender_can_pause_at, starts_at)
+        } else {
+            0
+        };
+        let recipient_can_resume_pause_by_sender_at = if recipient_can_resume_pause_by_sender {
+            min(recipient_can_resume_pause_by_sender_at, starts_at)
+        } else {
+            0
+        };
+        let anyone_can_withdraw_for_recipient_at = if anyone_can_withdraw_for_recipient {
+            min(anyone_can_withdraw_for_recipient_at, starts_at)
+        } else {
+            0
+        };
+
+        self.is_prepaid = true;
+        self.is_cancelled = false;
+        self.is_cancelled_before_start = false;
+        self.is_cancelled_by_sender = false;
+        self.is_paused = false;
+        self.is_paused_by_sender = false;
+        self.mint = mint;
+        self.sender = sender;
+        self.recipient = recipient;
+        self.created_at = starts_at;
+        self.starts_at = starts_at;
+        self.ends_at = ends_at;
+        self.initial_amount = initial_amount;
+        self.flow_interval = flow_interval;
+        self.flow_rate = flow_rate;
+        self.sender_can_cancel = sender_can_cancel;
+        self.sender_can_cancel_at = sender_can_cancel_at;
+        self.cancelled_at = 0;
+        self.sender_can_change_sender = sender_can_change_sender;
+        self.sender_can_change_sender_at = sender_can_change_sender_at;
+        self.sender_can_pause = sender_can_pause;
+        self.sender_can_pause_at = sender_can_pause_at;
+        self.recipient_can_resume_pause_by_sender = recipient_can_resume_pause_by_sender;
+        self.recipient_can_resume_pause_by_sender_at = recipient_can_resume_pause_by_sender_at;
+        self.anyone_can_withdraw_for_recipient = anyone_can_withdraw_for_recipient;
+        self.anyone_can_withdraw_for_recipient_at = anyone_can_withdraw_for_recipient_at;
+        self.last_resumed_at = 0;
+        self.accumulated_active_time = 0;
+        self.total_withdrawn_amount = 0;
+        self.last_withdrawn_at = 0;
+        self.last_withdrawn_amount = 0;
+        self.total_topup_amount = 0;
+        self.last_topup_at = 0;
+        self.last_topup_amount = 0;
+        self.deposit_needed = self.get_deposit_needed()?;
+        self.seed = seed;
+        self.bump = bump;
+        self.name = name;
+
+        require!(
+            self.initial_amount > 0 || self.has_flow_payments(),
+            StreamError::ZeroLifetimeAmount
+        );
+        Ok(())
+    }
+
     /// Initialize a prepaid stream.
     pub fn initialize_prepaid(&mut self) -> Result<u64> {
         let prepaid_amount_needed = self.get_prepaid_amount_needed()?;
@@ -903,8 +1006,8 @@ impl Stream {
         new_recipient: Pubkey,
     ) -> Result<u64> {
         require!(recipient == self.recipient, StreamError::InvalidRecipient);
-
         let at = get_current_timestamp()?;
+        require!(self.ends_at > 0 && self.ends_at < at, StreamError::StreamNotEnded);
         require!(
             signer.key() == self.recipient
                 || (self.anyone_can_withdraw_for_recipient && self.anyone_can_withdraw_for_recipient_at <= at),
@@ -912,8 +1015,6 @@ impl Stream {
         );
 
         let total_topup_amount = self.total_topup_amount;
-
-        let at = get_current_timestamp()?;
         let mut amount_owed = self.get_amount_owed(at)?;
         if amount_owed > total_topup_amount {
             // The stream is insolvent. Cancel the stream if not already cancelled. Recipient is owed the whole topup

@@ -128,6 +128,9 @@ pub enum StreamError {
     #[msg("The stream has not ended. Should have ended and nat been cancelled")]
     StreamNotEnded,
 
+    #[msg("The activity has already ended")]
+    ActivityEnded,
+
     #[msg("The distributor mint is not reward mint or opt-reward mint")]
     WrongRewardMint,
 
