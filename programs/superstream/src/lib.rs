@@ -338,6 +338,7 @@ pub mod superstream {
         distributor.creater_key = ctx.accounts.creator.key();
         distributor.total_claimed = 0;
         distributor.total_supply = total_supply;
+        distributor.reward_expires_at = ctx.accounts.activity.reward_expires_at;
         distributor.mint = ctx.accounts.mint.key();
 
         transfer_to_escrow(
@@ -413,7 +414,6 @@ pub mod superstream {
         //Check claim status
         //let sender = &ctx.accounts.sender;
         let distributor = &mut ctx.accounts.distributor;
-       
         if distributor.total_claimed >= distributor.total_supply {
             return Err(StreamError::MaxClaim.into());
         }
@@ -422,7 +422,11 @@ pub mod superstream {
         //     return Err(StreamError::InvalidRecipient.into());
         // }
         distributor.total_claimed = distributor.total_supply;
-
+        let at = utils::get_current_timestamp()?;
+        require!(
+            at <= distributor.reward_expires_at,
+            StreamError::DistributorNotExpire,
+        );
         let seeds  = [ 
             DISTRIBUTOR_ACCOUNT_SEED.as_ref(), 
             &distributor.activity_key.to_bytes(), 
@@ -672,6 +676,7 @@ pub(crate) fn create1(
 
     let stream = &mut ctx.accounts.stream;
     stream.initialize1(
+        activity_account.key(),
         ctx.accounts.mint.key(),
         ctx.accounts.sender.key(),
         recipient,

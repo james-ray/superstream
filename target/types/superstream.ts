@@ -1324,6 +1324,10 @@ export type Superstream = {
             "type": "u64"
           },
           {
+            "name": "rewardExpiresAt",
+            "type": "u64"
+          },
+          {
             "name": "mint",
             "type": "publicKey"
           }
@@ -1802,6 +1806,13 @@ export type Superstream = {
             "type": "u8"
           },
           {
+            "name": "activity",
+            "docs": [
+              "SPL token mint address."
+            ],
+            "type": "publicKey"
+          },
+          {
             "name": "name",
             "docs": [
               "Name of the stream. Should be unique for a particular set of (seed, mint).",
@@ -2071,6 +2082,11 @@ export type Superstream = {
       "code": 6045,
       "name": "MaxClaim",
       "msg": "Maximum claim amount"
+    },
+    {
+      "code": 6046,
+      "name": "DistributorNotExpire",
+      "msg": "Distributor not expire yet"
     }
   ]
 };
@@ -3401,6 +3417,10 @@ export const IDL: Superstream = {
             "type": "u64"
           },
           {
+            "name": "rewardExpiresAt",
+            "type": "u64"
+          },
+          {
             "name": "mint",
             "type": "publicKey"
           }
@@ -3879,6 +3899,13 @@ export const IDL: Superstream = {
             "type": "u8"
           },
           {
+            "name": "activity",
+            "docs": [
+              "SPL token mint address."
+            ],
+            "type": "publicKey"
+          },
+          {
             "name": "name",
             "docs": [
               "Name of the stream. Should be unique for a particular set of (seed, mint).",
@@ -4148,6 +4175,11 @@ export const IDL: Superstream = {
       "code": 6045,
       "name": "MaxClaim",
       "msg": "Maximum claim amount"
+    },
+    {
+      "code": 6046,
+      "name": "DistributorNotExpire",
+      "msg": "Distributor not expire yet"
     }
   ]
 };

@@ -40,6 +40,8 @@ pub struct Distributor {
 
     pub total_claimed: u64,
 
+    pub reward_expires_at: u64,
+
     // the mint to distribute
     pub mint: Pubkey,
 }   
@@ -331,6 +333,9 @@ pub struct Stream {
     /// The PDA bump.
     pub bump: u8,
 
+    /// SPL token mint address.
+    pub activity: Pubkey,
+
     /// Name of the stream. Should be unique for a particular set of (seed, mint).
     ///
     /// INVARIANT: Length <= 100 unicode chars or 400 bytes
@@ -400,6 +405,7 @@ impl Stream {
         + 16 * U64_LENGTH       // reserved - 411
         + 1 * U64_LENGTH        // seed - 419
         + 1 * U8_LENGTH         // bump - 420
+        + 1 * PUBLIC_KEY_LENGTH         // activity - 452
     ;
 
     pub fn space(name: &str) -> usize {
@@ -739,6 +745,7 @@ impl Stream {
 
     pub fn initialize1(
         &mut self,
+        activity: Pubkey,
         mint: Pubkey,
         sender: Pubkey,
         recipient: Pubkey,
@@ -800,6 +807,7 @@ impl Stream {
         self.is_cancelled_by_sender = false;
         self.is_paused = false;
         self.is_paused_by_sender = false;
+        self.activity = activity;
         self.mint = mint;
         self.sender = sender;
         self.recipient = recipient;

@@ -44,6 +44,9 @@ export type StreamFilters = {
    * Filter by the stream paused by sender status.
    */
   isPausedBySender?: boolean | null;
+
+  activity?: web3.PublicKey | null;
+
   /**
    * Filter by the stream name.
    */
@@ -135,10 +138,18 @@ export function streamFiltersToAnchorFilters(filters?: StreamFilters): GetProgra
       },
     });
   }
+  if (filters.activity) {
+    anchorFilters.push({
+      memcmp: {
+        offset: 432,
+        bytes: filters.activity.toString(),
+      },
+    });
+  }
   if (filters.name) {
     anchorFilters.push({
       memcmp: {
-        offset: 424,
+        offset: 456,
         bytes: bs58.encode(Buffer.from(filters.name)),
       },
     });

@@ -145,4 +145,7 @@ pub enum StreamError {
 
     #[msg("Maximum claim amount")]
     MaxClaim,
+
+    #[msg("Distributor not expire yet")]
+    DistributorNotExpire,
 }

@@ -25,8 +25,9 @@ import {
 import keccak256 = require("keccak256");
 
 import { Superstream } from "../target/types/superstream";
-import { MerkleTree } from "./scripts/merkle_tree";
 import { getAirdrop } from "./scripts/distribute.service";
+import { filter, streamFiltersToAnchorFilters } from "./scripts/filters";
+import { MerkleTree } from "./scripts/merkle_tree";
 
 const STREAM_ACCOUNT_SEED = "stream";
 const ACTIVITY_ACCOUNT_SEED = "activity";
@@ -95,6 +96,7 @@ describe("superstream", () => {
   let senderTokenAmount = new BN(1e10);
   const seed = new BN(0);
   const name = "s1";
+  const name2 = "s2";
 
   it("Initializes test setup", async () => {
     console.log("111111111 program id is " + program.programId);
@@ -116,8 +118,10 @@ describe("superstream", () => {
     await getAirdrop(recipient.publicKey);
     const [activityPublicKey] = getActivityPublicKey(program.programId, seed, mint, name);
     const recipientToken = await createAssociatedTokenAccount(provider, mint, recipient.publicKey);
-    const [streamPublicKey] = getStreamPublicKey(program.programId, activityPublicKey, sender.publicKey, mint, name);
+    const [streamPublicKey] = getStreamPublicKey(program.programId, activityPublicKey, mint, sender.publicKey, name);
+    const [streamPublicKey2] = getStreamPublicKey(program.programId, activityPublicKey, mint, sender.publicKey, name2);
     const escrowToken = await createAssociatedTokenAccount(provider, mint, streamPublicKey);
+    const escrowToken2 = await createAssociatedTokenAccount(provider, mint, streamPublicKey2);
     const [distributorPublicKey, distributorBump] = getDistributorPublicKey(program.programId, activityPublicKey, mint);
     const rewardEscrowToken = await createAssociatedTokenAccount(provider, mint, distributorPublicKey);
     const startAt = Math.floor(Date.now() / 1000);
@@ -173,8 +177,50 @@ describe("superstream", () => {
       })
       .rpc()
       .catch((error) => console.error(error));
-    console.log("createPrepaid sig is " + sig);
+    console.log("createStream sig is " + sig);
 
+    await program.methods
+      .createStream(
+        seed,
+        name2,
+        recipient.publicKey,
+        new BN(2000),
+        new BN(2),
+        new BN(20),
+        true,
+        new BN(0),
+        true,
+        new BN(0),
+        true,
+        new BN(0),
+        true,
+        new BN(0),
+        true,
+        new BN(0),
+      )
+      .accounts({
+        stream: streamPublicKey2,
+        activity: activityPublicKey,
+        sender: sender.publicKey,
+        mint,
+        senderToken,
+        escrowToken: escrowToken2,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: web3.SystemProgram.programId,
+      })
+      .rpc()
+      .catch((error) => console.error(error));
+    console.log("createStream sig is " + sig);
+    await sleep(5000);
+    const streamFilter = {
+      activity: activityPublicKey,
+    };
+    const anchorFilter = streamFiltersToAnchorFilters(streamFilter);
+    const streams = await program.account.stream.all(anchorFilter);
+    console.log("len(streams)=", streams.length);
+    streams.forEach((element) => {
+      console.log("stream: amount= " + element.account.amount);
+    });
     // sig = await program.methods
     //   .createPrepaid(
     //     seed,
@@ -226,6 +272,15 @@ describe("superstream", () => {
         streamAccount.initialAmount +
         " endsAt: " +
         streamAccount.endsAt,
+    );
+    const streamAccount2 = await program.account.stream.fetch(streamPublicKey2);
+    console.log(
+      "---streamAccount2.bump: " +
+        streamAccount2.bump +
+        " initialAmount: " +
+        streamAccount2.initialAmount +
+        " endsAt: " +
+        streamAccount2.endsAt,
     );
     const activityAccount = await program.account.activity.fetch(activityPublicKey);
     console.log(
