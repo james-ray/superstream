@@ -95,7 +95,6 @@ describe("superstream", () => {
   let senderTokenAmount = new BN(1e10);
   const seed = new BN(0);
   const name = "s1";
-  const [activityPublicKey] = getActivityPublicKey(program.programId, seed, mint, name);
 
   it("Initializes test setup", async () => {
     console.log("111111111 program id is " + program.programId);
@@ -115,8 +114,8 @@ describe("superstream", () => {
   it("Creates a prepaid stream", async () => {
     const recipient = web3.Keypair.generate();
     await getAirdrop(recipient.publicKey);
+    const [activityPublicKey] = getActivityPublicKey(program.programId, seed, mint, name);
     const recipientToken = await createAssociatedTokenAccount(provider, mint, recipient.publicKey);
-
     const [streamPublicKey] = getStreamPublicKey(program.programId, activityPublicKey, sender.publicKey, mint, name);
     const escrowToken = await createAssociatedTokenAccount(provider, mint, streamPublicKey);
     const [distributorPublicKey, distributorBump] = getDistributorPublicKey(program.programId, activityPublicKey, mint);
@@ -139,11 +138,11 @@ describe("superstream", () => {
         optRewardMint: opt_reward_mint,
         systemProgram: web3.SystemProgram.programId,
       })
-      .rpc()
-      .catch((error) => console.error(error));
+      .rpc();
+    //.catch((error) => console.error(error));
     console.log("createActivity sig is " + sig);
-
-    sig = await program.methods
+    console.log("streamPublicKeyis " + streamPublicKey);
+    await program.methods
       .createStream(
         seed,
         name,
@@ -164,6 +163,7 @@ describe("superstream", () => {
       )
       .accounts({
         stream: streamPublicKey,
+        activity: activityPublicKey,
         sender: sender.publicKey,
         mint,
         senderToken,
@@ -171,7 +171,8 @@ describe("superstream", () => {
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: web3.SystemProgram.programId,
       })
-      .rpc();
+      .rpc()
+      .catch((error) => console.error(error));
     console.log("createPrepaid sig is " + sig);
 
     // sig = await program.methods
@@ -430,9 +431,9 @@ describe("superstream", () => {
   it("Creates a non-prepaid stream", async () => {
     const recipient = web3.Keypair.generate();
     const recipientToken = await createAssociatedTokenAccount(provider, mint, recipient.publicKey);
-
     const seed = new BN(0);
     const name = "s2";
+    const [activityPublicKey] = getActivityPublicKey(program.programId, seed, mint, name);
     const [streamPublicKey] = getStreamPublicKey(program.programId, activityPublicKey, sender.publicKey, mint, name);
     const escrowToken = await createAssociatedTokenAccount(provider, mint, streamPublicKey);
 
