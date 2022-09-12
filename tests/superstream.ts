@@ -41,7 +41,8 @@ export class Claimer {
 export function claimersToLeaves(claimers: Claimer[]): Buffer[] {
   let i = -1;
   const leaves: Buffer[] = [];
-  claimers.map((x) =>
+  claimers.forEach((x) => {
+    console.log("x.amount=" + x.amount);
     leaves.push(
       Buffer.from(
         keccak256(
@@ -52,8 +53,8 @@ export function claimersToLeaves(claimers: Claimer[]): Buffer[] {
           ]),
         ),
       ),
-    ),
-  );
+    );
+  });
   return leaves;
 }
 
@@ -376,6 +377,15 @@ describe("superstream", () => {
 
     const index = 0;
     const leaves = claimersToLeaves(claimers);
+    let i = 0;
+    leaves.forEach((leaf) => {
+      let j = 0;
+      leaf.forEach((element) => {
+        console.log("i=" + i + "j=" + j + "ele: " + element);
+        j++;
+      });
+      i++;
+    });
     const merkleTree = new MerkleTree(leaves);
     const root = merkleTree.root();
     const proof = getProof(merkleTree, index);
