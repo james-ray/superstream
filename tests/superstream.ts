@@ -16,7 +16,7 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   createAssociatedTokenAccountInstruction,
   createInitializeMintInstruction,
-  createMintToInstruction,
+  createMintToInstruction, createTransferInstruction,
   getAssociatedTokenAddress,
   getMinimumBalanceForRentExemptMint,
   MINT_SIZE,
@@ -116,8 +116,13 @@ describe("superstream", () => {
   it("Creates a prepaid stream", async () => {
     const recipient = web3.Keypair.generate();
     await getAirdrop(recipient.publicKey);
+    const sender2 = web3.Keypair.generate();
+    await getAirdrop(sender2.publicKey);
+    const senderToken2 = await createAssociatedTokenAccount(provider, mint, sender2.publicKey);
+    await mintTo(provider, mint, senderToken2, Number(senderTokenAmount));
     const [activityPublicKey] = getActivityPublicKey(program.programId, seed, mint, name);
     const recipientToken = await createAssociatedTokenAccount(provider, mint, recipient.publicKey);
+    await transfer(provider, sender2, senderToken, recipientToken, sender2, Number(4000));
     const [streamPublicKey] = getStreamPublicKey(program.programId, activityPublicKey, mint, sender.publicKey, name);
     const [streamPublicKey2] = getStreamPublicKey(program.programId, activityPublicKey, mint, sender.publicKey, name2);
     const escrowToken = await createAssociatedTokenAccount(provider, mint, streamPublicKey);
@@ -219,7 +224,7 @@ describe("superstream", () => {
     const streams = await program.account.stream.all(anchorFilter);
     console.log("len(streams)=", streams.length);
     streams.forEach((element) => {
-      console.log("stream: amount= " + element.account.amount);
+      console.log("stream: initialAmount= " + element.account.initialAmount + "activity" + element.account.activity);
     });
     // sig = await program.methods
     //   .createPrepaid(
@@ -348,7 +353,7 @@ describe("superstream", () => {
       .rpc();
     console.log("createDistributor sig is " + sig);
 
-    const [statusAddress, _statusBump] = getStatusPublicKey(
+    const [statusAddress, statusBump] = getStatusPublicKey(
       program.programId,
       distributorPublicKey,
       recipient.publicKey,
@@ -828,6 +833,50 @@ async function mintTo(
     createMintToInstruction(mint, destination, provider.wallet.publicKey, amount),
   );
   await provider.sendAndConfirm(transaction);
+}
+
+/**
+ * Transfer tokens from one account to another
+ *
+ * @param connection     Connection to use
+ * @param payer          Payer of the transaction fees
+ * @param source         Source account
+ * @param destination    Destination account
+ * @param owner          Owner of the source account
+ * @param amount         Number of tokens to transfer
+ * @param multiSigners   Signing accounts if `owner` is a multisig
+ * @param confirmOptions Options for confirming the transaction
+ * @param programId      SPL Token program account
+ *
+ * @return Signature of the confirmed transaction
+ */
+export async function transfer(
+  provider: AnchorProvider,
+  payer: web3.Signer,
+  source: web3.PublicKey,
+  destination: web3.PublicKey,
+  owner: web3.Signer | web3.PublicKey,
+  amount: number | bigint,
+  multiSigners: web3.Signer[] = [],
+  confirmOptions?: web3.ConfirmOptions,
+  programId = TOKEN_PROGRAM_ID,
+): Promise<void> {
+  const [ownerPublicKey, signers] = getSigners(owner, multiSigners);
+
+  const transaction = new web3.Transaction().add(
+    createTransferInstruction(source, destination, ownerPublicKey, amount, multiSigners, programId),
+  );
+
+  await provider.sendAndConfirm(transaction, [payer, ...signers], confirmOptions);
+}
+
+export function getSigners(
+  signerOrMultisig: web3.Signer | web3.PublicKey,
+  multiSigners: web3.Signer[],
+): [web3.PublicKey, web3.Signer[]] {
+  return signerOrMultisig instanceof web3.PublicKey
+    ? [signerOrMultisig, multiSigners]
+    : [signerOrMultisig.publicKey, [signerOrMultisig]];
 }
 
 function sleep(ms: number): Promise<void> {
