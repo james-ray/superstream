@@ -757,7 +757,6 @@ pub struct Create<'info> {
     #[account(
         mut,
         constraint =
-            activity.creator == sender.key() &&
             activity.stake_mint == mint.key(),
         )]
     pub activity: Account<'info, Activity>,

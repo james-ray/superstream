@@ -243,7 +243,7 @@ describe("superstream", () => {
         activity: activityPublicKey,
         sender: sender2.publicKey,
         mint,
-        senderToken2,
+        senderToken: senderToken2,
         escrowToken: escrowToken3,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: web3.SystemProgram.programId,
