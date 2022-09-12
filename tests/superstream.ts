@@ -93,6 +93,7 @@ describe("superstream", () => {
   let reward_mint = web3.PublicKey.default;
   let opt_reward_mint = web3.PublicKey.default;
   let senderToken = web3.PublicKey.default;
+  let senderToken2 = web3.PublicKey.default;
   let senderTokenAmount = new BN(1e10);
   const seed = new BN(0);
   const name = "s1";
@@ -118,7 +119,7 @@ describe("superstream", () => {
     await getAirdrop(recipient.publicKey);
     const sender2 = web3.Keypair.generate();
     await getAirdrop(sender2.publicKey);
-    const senderToken2 = await createAssociatedTokenAccount(provider, mint, sender2.publicKey);
+    senderToken2 = await createAssociatedTokenAccount(provider, mint, sender2.publicKey);
     await mintTo(provider, mint, senderToken2, Number(senderTokenAmount));
     const [activityPublicKey] = getActivityPublicKey(program.programId, seed, mint, name);
     const recipientToken = await createAssociatedTokenAccount(provider, mint, recipient.publicKey);
