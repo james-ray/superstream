@@ -141,7 +141,7 @@ export function streamFiltersToAnchorFilters(filters?: StreamFilters): GetProgra
   if (filters.activity) {
     anchorFilters.push({
       memcmp: {
-        offset: 452,
+        offset: 420,
         bytes: filters.activity.toString(),
       },
     });
