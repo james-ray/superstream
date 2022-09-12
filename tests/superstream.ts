@@ -122,7 +122,7 @@ describe("superstream", () => {
     await mintTo(provider, mint, senderToken2, Number(senderTokenAmount));
     const [activityPublicKey] = getActivityPublicKey(program.programId, seed, mint, name);
     const recipientToken = await createAssociatedTokenAccount(provider, mint, recipient.publicKey);
-    await transfer(provider, sender2, senderToken, recipientToken, sender2, Number(4000));
+    await transfer(provider, sender2, senderToken2, recipientToken, sender2, Number(4000));
     const [streamPublicKey] = getStreamPublicKey(program.programId, activityPublicKey, mint, sender.publicKey, name);
     const [streamPublicKey2] = getStreamPublicKey(program.programId, activityPublicKey, mint, sender.publicKey, name2);
     const escrowToken = await createAssociatedTokenAccount(provider, mint, streamPublicKey);
@@ -226,6 +226,17 @@ describe("superstream", () => {
     streams.forEach((element) => {
       console.log("stream: initialAmount= " + element.account.initialAmount + "activity" + element.account.activity);
     });
+
+    const streamFilter2 = {
+      activity: activityPublicKey,
+    };
+    const anchorFilter2 = streamFiltersToAnchorFilters(streamFilter);
+    const streams2 = await program.account.stream.all(anchorFilter);
+    console.log("len(streams)=", streams2.length);
+    streams2.forEach((element) => {
+      console.log("stream2: initialAmount= " + element.account.initialAmount + "activity" + element.account.activity);
+    });
+
     // sig = await program.methods
     //   .createPrepaid(
     //     seed,
@@ -867,7 +878,9 @@ export async function transfer(
     createTransferInstruction(source, destination, ownerPublicKey, amount, multiSigners, programId),
   );
 
-  await provider.sendAndConfirm(transaction, [payer, ...signers], confirmOptions);
+  await provider
+    .sendAndConfirm(transaction, [payer, ...signers], confirmOptions)
+    .catch((error) => console.error(error));
 }
 
 export function getSigners(
