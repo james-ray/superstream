@@ -125,8 +125,10 @@ describe("superstream", () => {
     await transfer(provider, sender2, senderToken2, recipientToken, sender2, Number(4000));
     const [streamPublicKey] = getStreamPublicKey(program.programId, activityPublicKey, mint, sender.publicKey, name);
     const [streamPublicKey2] = getStreamPublicKey(program.programId, activityPublicKey, mint, sender.publicKey, name2);
+    const [streamPublicKey3] = getStreamPublicKey(program.programId, activityPublicKey, mint, sender2.publicKey, name);
     const escrowToken = await createAssociatedTokenAccount(provider, mint, streamPublicKey);
     const escrowToken2 = await createAssociatedTokenAccount(provider, mint, streamPublicKey2);
+    const escrowToken3 = await createAssociatedTokenAccount(provider, mint, streamPublicKey3);
     const [distributorPublicKey, distributorBump] = getDistributorPublicKey(program.programId, activityPublicKey, mint);
     const rewardEscrowToken = await createAssociatedTokenAccount(provider, mint, distributorPublicKey);
     const startAt = Math.floor(Date.now() / 1000);
@@ -236,12 +238,12 @@ describe("superstream", () => {
         new BN(0),
       )
       .accounts({
-        stream: streamPublicKey2,
+        stream: streamPublicKey3,
         activity: activityPublicKey,
         sender: sender2.publicKey,
         mint,
         senderToken2,
-        escrowToken: escrowToken2,
+        escrowToken: escrowToken3,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: web3.SystemProgram.programId,
       })
