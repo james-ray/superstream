@@ -215,7 +215,40 @@ describe("superstream", () => {
       })
       .rpc()
       .catch((error) => console.error(error));
-    console.log("createStream sig is " + sig);
+    console.log("createStream 2 sig is " + sig);
+    await program.methods
+      .createStream(
+        seed,
+        name,
+        recipient.publicKey,
+        new BN(2000),
+        new BN(2),
+        new BN(20),
+        true,
+        new BN(0),
+        true,
+        new BN(0),
+        true,
+        new BN(0),
+        true,
+        new BN(0),
+        true,
+        new BN(0),
+      )
+      .accounts({
+        stream: streamPublicKey2,
+        activity: activityPublicKey,
+        sender: sender2.publicKey,
+        mint,
+        senderToken2,
+        escrowToken: escrowToken2,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: web3.SystemProgram.programId,
+      })
+      .signers([sender2])
+      .rpc()
+      .catch((error) => console.error(error));
+    console.log("createStream 3 sig is " + sig);
     await sleep(5000);
     const streamFilter = {
       activity: activityPublicKey,
@@ -228,6 +261,7 @@ describe("superstream", () => {
     });
 
     const streamFilter2 = {
+      sender: sender,
       activity: activityPublicKey,
     };
     const anchorFilter2 = streamFiltersToAnchorFilters(streamFilter);
