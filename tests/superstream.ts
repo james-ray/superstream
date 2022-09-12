@@ -154,7 +154,7 @@ describe("superstream", () => {
     //.catch((error) => console.error(error));
     console.log("createActivity sig is " + sig);
     console.log("streamPublicKeyis " + streamPublicKey);
-    await program.methods
+    sig = await program.methods
       .createStream(
         seed,
         name,
@@ -183,11 +183,11 @@ describe("superstream", () => {
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: web3.SystemProgram.programId,
       })
-      .rpc()
-      .catch((error) => console.error(error));
+      .rpc();
+    //.catch((error) => console.error(error));
     console.log("createStream sig is " + sig);
 
-    await program.methods
+    sig = await program.methods
       .createStream(
         seed,
         name2,
@@ -216,10 +216,10 @@ describe("superstream", () => {
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: web3.SystemProgram.programId,
       })
-      .rpc()
-      .catch((error) => console.error(error));
+      .rpc();
+    //.catch((error) => console.error(error));
     console.log("createStream 2 sig is " + sig);
-    await program.methods
+    sig = await program.methods
       .createStream(
         seed,
         name,
@@ -249,10 +249,10 @@ describe("superstream", () => {
         systemProgram: web3.SystemProgram.programId,
       })
       .signers([sender2])
-      .rpc()
-      .catch((error) => console.error(error));
+      .rpc();
+    //.catch((error) => console.error(error));
     console.log("createStream 3 sig is " + sig);
-    await sleep(5000);
+    await sleep(3000);
     const streamFilter = {
       activity: activityPublicKey,
     };
@@ -260,18 +260,18 @@ describe("superstream", () => {
     const streams = await program.account.stream.all(anchorFilter);
     console.log("len(streams)=", streams.length);
     streams.forEach((element) => {
-      console.log("stream: initialAmount= " + element.account.initialAmount + "activity" + element.account.activity);
+      console.log("stream: initialAmount= " + element.account.initialAmount + " activity" + element.account.activity);
     });
 
     const streamFilter2 = {
-      sender: sender,
+      sender: sender.publicKey,
       activity: activityPublicKey,
     };
-    const anchorFilter2 = streamFiltersToAnchorFilters(streamFilter);
-    const streams2 = await program.account.stream.all(anchorFilter);
+    const anchorFilter2 = streamFiltersToAnchorFilters(streamFilter2);
+    const streams2 = await program.account.stream.all(anchorFilter2);
     console.log("len(streams)=", streams2.length);
     streams2.forEach((element) => {
-      console.log("stream2: initialAmount= " + element.account.initialAmount + "activity" + element.account.activity);
+      console.log("stream2: initialAmount= " + element.account.initialAmount + " activity" + element.account.activity);
     });
 
     // sig = await program.methods
