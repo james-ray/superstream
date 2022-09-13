@@ -326,7 +326,7 @@ pub mod superstream {
 
     pub fn create_distributor(
         ctx: Context<NewDistributor>,
-        _bump:u8, 
+        _bump:u8,
         root:[u8; 32],
         total_supply: u64,
     ) -> Result<()> {
@@ -367,14 +367,14 @@ pub mod superstream {
         if distributor.mint.key() != ctx.accounts.mint.key() {
             return Err(StreamError::InvalidRecipient.into());
         }
-        
+
         //Verify merkle proof
         let node = anchor_lang::solana_program::keccak::hashv(&[
             &index.to_le_bytes(),
             &claimer.key().to_bytes(),
             &amount.to_le_bytes(),
         ]);
-        
+
         if leaf != node.0 {
             return Err(StreamError::InvalidMerkleLeaf.into());
         }
@@ -392,10 +392,10 @@ pub mod superstream {
         status.is_claimed = true;
         status.claimer = claimer.key();
         distributor.total_claimed = distributor.total_claimed + amount;
-        let seeds  = [ 
-            DISTRIBUTOR_ACCOUNT_SEED.as_ref(), 
-            &distributor.activity_key.to_bytes(), 
-            &distributor.mint.to_bytes(), 
+        let seeds  = [
+            DISTRIBUTOR_ACCOUNT_SEED.as_ref(),
+            &distributor.activity_key.to_bytes(),
+            &distributor.mint.to_bytes(),
             &[ctx.accounts.distributor.bump],
             ];
         token::transfer(
@@ -413,7 +413,7 @@ pub mod superstream {
 
         Ok(())
     }
-    
+
     pub fn recycle_reward(ctx: Context<RecycleReward>) -> Result<()> {
         //Check claim status
         //let sender = &ctx.accounts.sender;
@@ -431,10 +431,10 @@ pub mod superstream {
             at <= distributor.reward_expires_at,
             StreamError::DistributorNotExpire,
         );
-        let seeds  = [ 
-            DISTRIBUTOR_ACCOUNT_SEED.as_ref(), 
-            &distributor.activity_key.to_bytes(), 
-            &distributor.mint.to_bytes(), 
+        let seeds  = [
+            DISTRIBUTOR_ACCOUNT_SEED.as_ref(),
+            &distributor.activity_key.to_bytes(),
+            &distributor.mint.to_bytes(),
             &[ctx.accounts.distributor.bump],
             ];
         token::transfer(
@@ -557,10 +557,10 @@ pub mod superstream {
         let amount_available_to_withdraw =
             stream.withdraw_and_change_recipient(&ctx.accounts.signer, recipient, new_recipient)?;
         let bump = stream.bump;
-        let seeds  = [ 
-            STREAM_ACCOUNT_SEED.as_ref(), 
-            &stream.activity.to_bytes(), 
-            &stream.mint.to_bytes(), 
+        let seeds  = [
+            STREAM_ACCOUNT_SEED.as_ref(),
+            &stream.activity.to_bytes(),
+            &stream.mint.to_bytes(),
             &creator.to_bytes(),
             name.as_bytes(),
             &[bump],
@@ -842,7 +842,7 @@ pub struct CreateActivity<'info> {
 
      /// SPL token mint account.
     pub opt_reward_mint: Box<Account<'info, Mint>>,
-    
+
     /// Solana system program.
     pub system_program: Program<'info, System>,
 }
@@ -850,14 +850,14 @@ pub struct CreateActivity<'info> {
 #[derive(Accounts)]
 pub struct NewDistributor<'info> {
     #[account(
-        init, 
-        payer = creator, 
+        init,
+        payer = creator,
         space = 3000,     //TODO: implement space()
         seeds = [
             DISTRIBUTOR_ACCOUNT_SEED.as_ref(),
             activity.key().to_bytes().as_ref(),
             mint.key().to_bytes().as_ref()
-            ], 
+            ],
         bump
     )]
     pub distributor: Account<'info, Distributor>,
@@ -884,7 +884,7 @@ pub struct NewDistributor<'info> {
         mut,
         constraint =
         reward_escrow_token.mint == mint.key()
-            && reward_escrow_token.owner == distributor.key(),   
+            && reward_escrow_token.owner == distributor.key(),
     )]
     pub reward_escrow_token: Box<Account<'info, TokenAccount>>,
 
@@ -906,7 +906,7 @@ pub struct Claim<'info> {
             && escrow_token.owner == distributor.key(),
     )]
     pub escrow_token: Box<Account<'info, TokenAccount>>,
-    
+
     #[account(
         mut,
         constraint =
@@ -922,14 +922,14 @@ pub struct Claim<'info> {
     pub mint: Box<Account<'info, Mint>>,
 
     #[account(
-        init, 
-        payer = claimer, 
+        init,
+        payer = claimer,
         seeds = [
-            STATUS_ACCOUNT_SEED.as_ref(), 
+            STATUS_ACCOUNT_SEED.as_ref(),
             distributor.to_account_info().key().to_bytes().as_ref(),
             claimer.key().to_bytes().as_ref(),
-            ], 
-        bump, 
+            ],
+        bump,
         space = 50)]
     pub status: Account<'info, Status>,
 
@@ -950,7 +950,7 @@ pub struct RecycleReward<'info> {
             && escrow_token.owner == distributor.key(),
     )]
     pub escrow_token: Box<Account<'info, TokenAccount>>,
-    
+
     #[account(
         mut,
         constraint =
@@ -1156,7 +1156,7 @@ pub struct ChangeSenderNonPrepaid<'info> {
 
 /// Accounts struct for withdrawing recipient funds from a stream and changing recipient of a stream.
 #[derive(Accounts)]
-#[instruction(seed: u64, name: String, recipient: Pubkey)]
+#[instruction(name: String, recipient: Pubkey, creator: Pubkey)]
 pub struct WithdrawAndChangeRecipient<'info> {
     /// Stream PDA account.
     #[account(

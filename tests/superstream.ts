@@ -519,7 +519,7 @@ describe("superstream", () => {
     const diffOnWithdraw = Math.floor(Date.now() / 1000) - startAt;
 
     console.log("sender.publicKey is " + sender.publicKey);
-    await program.methods
+    sig = await program.methods
       .withdraw(name, recipient.publicKey, sender.publicKey)
       .accounts({
         stream: streamPublicKey,
@@ -530,9 +530,9 @@ describe("superstream", () => {
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .signers([recipient])
-      .rpc()
-      .catch((error) => console.error(error));
-
+      .rpc();
+    //.catch((error) => console.error(error));
+    console.log("withdraw sig is " + sig);
     recipientTokenAccount = await fetchTokenAccount(recipientToken);
     approximatelyEqualBN(recipientTokenAccount.amount, new BN(1000 + diffOnWithdraw * 10));
 
