@@ -1111,7 +1111,7 @@ export type Superstream = {
           "type": "publicKey"
         },
         {
-          "name": "creator",
+          "name": "sender",
           "type": "publicKey"
         }
       ]
@@ -3218,7 +3218,7 @@ export const IDL: Superstream = {
           "type": "publicKey"
         },
         {
-          "name": "creator",
+          "name": "sender",
           "type": "publicKey"
         }
       ]

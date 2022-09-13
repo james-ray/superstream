@@ -534,9 +534,9 @@ pub mod superstream {
         ctx: Context<WithdrawAndChangeRecipient>,
         name: String,
         recipient: Pubkey,
-        creator: Pubkey,
+        sender: Pubkey,
     ) -> Result<()> {
-        withdraw_and_change_recipient(ctx, name, recipient, creator,Pubkey::default())
+        withdraw_and_change_recipient(ctx, name, recipient, sender,Pubkey::default())
     }
 
     /// Withdraw recipient funds from a stream and change recipient of a stream.
@@ -1156,11 +1156,12 @@ pub struct ChangeSenderNonPrepaid<'info> {
 
 /// Accounts struct for withdrawing recipient funds from a stream and changing recipient of a stream.
 #[derive(Accounts)]
-#[instruction(name: String, recipient: Pubkey, creator: Pubkey)]
+#[instruction(name: String, recipient: Pubkey, sender: Pubkey)]
 pub struct WithdrawAndChangeRecipient<'info> {
     /// Stream PDA account.
     #[account(
-        mut
+        mut,
+        has_one = sender,
     )]
     pub stream: Account<'info, Stream>,
 
