@@ -518,6 +518,7 @@ describe("superstream", () => {
 
     const diffOnWithdraw = Math.floor(Date.now() / 1000) - startAt;
 
+    console.log("sender.publicKey is " + sender.publicKey);
     await program.methods
       .withdraw(name, recipient.publicKey, sender.publicKey)
       .accounts({
