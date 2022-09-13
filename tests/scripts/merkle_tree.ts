@@ -46,9 +46,9 @@ export class MerkleTree {
       for (let j = 0; j < subNodes.length; j += 2) {
         const hash0: Buffer = subNodes[j].hash;
         const hash1: Buffer = subNodes[j + 1].hash;
-        console.log("hash0 <= hash1 ?" + (hash0 <= hash1));
+        console.log("hash0 <= hash1 ?" + (Buffer.compare(hash0, hash1) <= 0));
         const newHash: Buffer =
-          hash0 <= hash1
+          Buffer.compare(hash0, hash1) <= 0
             ? HashService.keckka256(Buffer.concat([hash0, hash1]))
             : HashService.keckka256(Buffer.concat([hash1, hash0]));
         newNodes.push(<MerkleNode>{
