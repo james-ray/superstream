@@ -1103,15 +1103,15 @@ export type Superstream = {
       ],
       "args": [
         {
-          "name": "seed",
-          "type": "u64"
-        },
-        {
           "name": "name",
           "type": "string"
         },
         {
           "name": "recipient",
+          "type": "publicKey"
+        },
+        {
+          "name": "creator",
           "type": "publicKey"
         }
       ]
@@ -1182,15 +1182,15 @@ export type Superstream = {
       ],
       "args": [
         {
-          "name": "seed",
-          "type": "u64"
-        },
-        {
           "name": "name",
           "type": "string"
         },
         {
           "name": "recipient",
+          "type": "publicKey"
+        },
+        {
+          "name": "creator",
           "type": "publicKey"
         },
         {
@@ -3210,15 +3210,15 @@ export const IDL: Superstream = {
       ],
       "args": [
         {
-          "name": "seed",
-          "type": "u64"
-        },
-        {
           "name": "name",
           "type": "string"
         },
         {
           "name": "recipient",
+          "type": "publicKey"
+        },
+        {
+          "name": "creator",
           "type": "publicKey"
         }
       ]
@@ -3289,15 +3289,15 @@ export const IDL: Superstream = {
       ],
       "args": [
         {
-          "name": "seed",
-          "type": "u64"
-        },
-        {
           "name": "name",
           "type": "string"
         },
         {
           "name": "recipient",
+          "type": "publicKey"
+        },
+        {
+          "name": "creator",
           "type": "publicKey"
         },
         {

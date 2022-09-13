@@ -448,9 +448,7 @@ pub mod superstream {
             )
             .with_signer(&[&seeds[..]]),
             recycle_amount,
-        )?;
-
-        Ok(())
+        )
     }
 
     /// Cancel a stream.
@@ -534,11 +532,11 @@ pub mod superstream {
     /// For more information on the arguments, see fields of the [`Stream`] struct.
     pub fn withdraw(
         ctx: Context<WithdrawAndChangeRecipient>,
-        seed: u64,
         name: String,
         recipient: Pubkey,
+        creator: Pubkey,
     ) -> Result<()> {
-        withdraw_and_change_recipient(ctx, seed, name, recipient, Pubkey::default())
+        withdraw_and_change_recipient(ctx, name, recipient, creator,Pubkey::default())
     }
 
     /// Withdraw recipient funds from a stream and change recipient of a stream.
@@ -550,17 +548,35 @@ pub mod superstream {
     /// For more information on the other arguments, see fields of the [`Stream`] struct.
     pub fn withdraw_and_change_recipient(
         ctx: Context<WithdrawAndChangeRecipient>,
-        seed: u64,
         name: String,
         recipient: Pubkey,
+        creator: Pubkey,
         new_recipient: Pubkey,
     ) -> Result<()> {
         let stream = &mut ctx.accounts.stream;
         let amount_available_to_withdraw =
             stream.withdraw_and_change_recipient(&ctx.accounts.signer, recipient, new_recipient)?;
         let bump = stream.bump;
-        ctx.accounts
-            .transfer_from_escrow(seed, &name, bump, amount_available_to_withdraw)
+        let seeds  = [ 
+            STREAM_ACCOUNT_SEED.as_ref(), 
+            &stream.activity.to_bytes(), 
+            &stream.mint.to_bytes(), 
+            &creator.to_bytes(),
+            name.as_bytes(),
+            &[bump],
+            ];
+        token::transfer(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                token::Transfer {
+                    from: ctx.accounts.escrow_token.to_account_info(),
+                    to: ctx.accounts.recipient_token.to_account_info(),
+                    authority: ctx.accounts.stream.to_account_info(),
+                },
+            )
+            .with_signer(&[&seeds[..]]),
+            amount_available_to_withdraw,
+        )
     }
 
     /// Pause a non-prepaid stream.
@@ -1144,14 +1160,7 @@ pub struct ChangeSenderNonPrepaid<'info> {
 pub struct WithdrawAndChangeRecipient<'info> {
     /// Stream PDA account.
     #[account(
-        mut,
-        seeds = [
-            STREAM_ACCOUNT_SEED,
-            seed.to_le_bytes().as_ref(),
-            mint.key().as_ref(),
-            name.as_bytes(),
-        ],
-        bump,
+        mut
     )]
     pub stream: Account<'info, Stream>,
 

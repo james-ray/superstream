@@ -1103,15 +1103,15 @@
       ],
       "args": [
         {
-          "name": "seed",
-          "type": "u64"
-        },
-        {
           "name": "name",
           "type": "string"
         },
         {
           "name": "recipient",
+          "type": "publicKey"
+        },
+        {
+          "name": "creator",
           "type": "publicKey"
         }
       ]
@@ -1182,15 +1182,15 @@
       ],
       "args": [
         {
-          "name": "seed",
-          "type": "u64"
-        },
-        {
           "name": "name",
           "type": "string"
         },
         {
           "name": "recipient",
+          "type": "publicKey"
+        },
+        {
+          "name": "creator",
           "type": "publicKey"
         },
         {

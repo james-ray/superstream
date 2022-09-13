@@ -67,8 +67,9 @@ export function getProof(tree: MerkleTree, index: number): Buffer[] {
   for (let i = 0; i < nodes.length - 1; i++) {
     const proof = currentIndex % 2 == 0 ? nodes[i][currentIndex + 1] : nodes[i][currentIndex - 1];
     currentIndex = (currentIndex - (currentIndex % 2)) / 2;
-    console.log("push proof i=" + i + "   currentIndex=" + currentIndex);
-    proof.hash.forEach((element) => {
+    const proofHash = toBytes32Array(proof.hash);
+    console.log("push proof i=" + i + "   currentIndex=" + currentIndex + "proofHash.length: " + proofHash.length);
+    proofHash.forEach((element) => {
       console.log("ele " + element);
     });
     proofs.push(proof);
@@ -402,14 +403,13 @@ describe("superstream", () => {
     // });
     const proof = getProof(merkleTree, index);
     const root1 = toBytes32Array(root.hash);
-    console.log("root =");
-    const root2 = Array.from(root1);
-    root2.forEach((element) => {
+    console.log("root len =" + root1.length);
+    root1.forEach((element) => {
       console.log("ele " + element);
     });
 
     sig = await program.methods
-      .createDistributor(distributorBump, root2, new BN(1000))
+      .createDistributor(distributorBump, root1, new BN(1000))
       .accounts({
         distributor: distributorPublicKey,
         activity: activityPublicKey,
@@ -439,8 +439,8 @@ describe("superstream", () => {
     let escrowRewardTokenAccount = await fetchTokenAccount(rewardEscrowToken);
     console.log("escrowRewardTokenAccount.amount: " + escrowRewardTokenAccount.amount);
 
-    console.log("leaf =");
     const leaf1 = toBytes32Array(leaves[0]);
+    console.log("leaf len =" + leaf1.length);
     leaf1.forEach((element) => {
       console.log("ele " + element);
     });
@@ -519,7 +519,7 @@ describe("superstream", () => {
     const diffOnWithdraw = Math.floor(Date.now() / 1000) - startAt;
 
     await program.methods
-      .withdraw(new BN(0), name, recipient.publicKey)
+      .withdraw(name, recipient.publicKey, sender.publicKey)
       .accounts({
         stream: streamPublicKey,
         signer: recipient.publicKey,
@@ -563,7 +563,7 @@ describe("superstream", () => {
     await sleep(4000);
 
     await program.methods
-      .withdraw(seed, name, recipient.publicKey)
+      .withdraw(name, recipient.publicKey, sender.publicKey)
       .accounts({
         stream: streamPublicKey,
         signer: sender.publicKey,
