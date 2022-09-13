@@ -667,6 +667,15 @@ export type Superstream = {
           "type": "u64"
         },
         {
+          "name": "leaf",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
           "name": "proof",
           "type": {
             "vec": {
@@ -2070,21 +2079,26 @@ export type Superstream = {
     },
     {
       "code": 6043,
+      "name": "InvalidMerkleLeaf",
+      "msg": "Invalid Merkle leaf"
+    },
+    {
+      "code": 6044,
       "name": "InvalidMerkleProof",
       "msg": "Invalid Merkle proof"
     },
     {
-      "code": 6044,
+      "code": 6045,
       "name": "InvalidOwner",
       "msg": "Invalid Owner"
     },
     {
-      "code": 6045,
+      "code": 6046,
       "name": "MaxClaim",
       "msg": "Maximum claim amount"
     },
     {
-      "code": 6046,
+      "code": 6047,
       "name": "DistributorNotExpire",
       "msg": "Distributor not expire yet"
     }
@@ -2760,6 +2774,15 @@ export const IDL: Superstream = {
           "type": "u64"
         },
         {
+          "name": "leaf",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
           "name": "proof",
           "type": {
             "vec": {
@@ -4163,21 +4186,26 @@ export const IDL: Superstream = {
     },
     {
       "code": 6043,
+      "name": "InvalidMerkleLeaf",
+      "msg": "Invalid Merkle leaf"
+    },
+    {
+      "code": 6044,
       "name": "InvalidMerkleProof",
       "msg": "Invalid Merkle proof"
     },
     {
-      "code": 6044,
+      "code": 6045,
       "name": "InvalidOwner",
       "msg": "Invalid Owner"
     },
     {
-      "code": 6045,
+      "code": 6046,
       "name": "MaxClaim",
       "msg": "Maximum claim amount"
     },
     {
-      "code": 6046,
+      "code": 6047,
       "name": "DistributorNotExpire",
       "msg": "Distributor not expire yet"
     }

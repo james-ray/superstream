@@ -16,14 +16,15 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   createAssociatedTokenAccountInstruction,
   createInitializeMintInstruction,
-  createMintToInstruction, createTransferInstruction,
+  createMintToInstruction,
+  createTransferInstruction,
   getAssociatedTokenAddress,
   getMinimumBalanceForRentExemptMint,
   MINT_SIZE,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import keccak256 = require("keccak256");
-
+import invariant from "tiny-invariant";
 import { Superstream } from "../target/types/superstream";
 import { getAirdrop } from "./scripts/distribute.service";
 import { filter, streamFiltersToAnchorFilters } from "./scripts/filters";
@@ -42,12 +43,13 @@ export function claimersToLeaves(claimers: Claimer[]): Buffer[] {
   let i = -1;
   const leaves: Buffer[] = [];
   claimers.forEach((x) => {
-    console.log("x.amount=" + x.amount);
+    i++;
+    console.log("i=" + i + " x.amount=" + x.amount + " x.pubKey" + x.pubKey);
     leaves.push(
       Buffer.from(
         keccak256(
           Buffer.concat([
-            new BN((i += 1)).toArrayLike(Buffer, "le", 8),
+            new BN(i).toArrayLike(Buffer, "le", 8),
             x.pubKey.toBuffer(),
             new BN(x.amount).toArrayLike(Buffer, "le", 8),
           ]),
@@ -75,6 +77,14 @@ export function getProof(tree: MerkleTree, index: number): Buffer[] {
   proofs.forEach((x) => buffer.push(x.hash));
   return buffer;
 }
+
+export const toBytes32Array = (b: Buffer): number[] => {
+  invariant(b.length <= 32, `invalid length ${b.length}`);
+  const buf = Buffer.alloc(32);
+  b.copy(buf, 32 - b.length);
+
+  return Array.from(buf);
+};
 
 describe("superstream", () => {
   const provider = AnchorProvider.env();
@@ -139,7 +149,7 @@ describe("superstream", () => {
     let senderTokenAccount = await fetchTokenAccount(senderToken);
     const previousAmount = senderTokenAccount.amount;
     console.log("senderTokenAccount.amount: " + senderTokenAccount.amount);
-
+    console.log("recipient.publicKey: " + recipient.publicKey);
     console.log("activityPublicKey: " + activityPublicKey);
     let sig = await program.methods
       .createActivity(seed, name, new BN(0), new BN(endsAt), new BN(endsAt), new BN(4), new BN(1000), new BN(0))
@@ -388,8 +398,10 @@ describe("superstream", () => {
     });
     const merkleTree = new MerkleTree(leaves);
     const root = merkleTree.root();
+    // merkleTree.nodes.forEach(node => {
+    // });
     const proof = getProof(merkleTree, index);
-    const root1 = root.hash as Uint8Array;
+    const root1 = toBytes32Array(root.hash);
     console.log("root =");
     const root2 = Array.from(root1);
     root2.forEach((element) => {
@@ -417,11 +429,28 @@ describe("superstream", () => {
       recipient.publicKey,
     );
     await sleep(2000);
+    const distributorAccount = await program.account.distributor.fetch(distributorPublicKey);
+    console.log(
+      "---distributorAccount.root: " +
+        distributorAccount.root +
+        " distributorAccount.activityKey: " +
+        distributorAccount.activityKey,
+    );
     let escrowRewardTokenAccount = await fetchTokenAccount(rewardEscrowToken);
     console.log("escrowRewardTokenAccount.amount: " + escrowRewardTokenAccount.amount);
 
+    console.log("leaf =");
+    const leaf1 = toBytes32Array(leaves[0]);
+    leaf1.forEach((element) => {
+      console.log("ele " + element);
+    });
     sig = await program.methods
-      .claim(new BN(index), new BN(10), proof)
+      .claim(
+        new BN(index),
+        new BN(10),
+        leaf1,
+        proof.map((p) => toBytes32Array(p)),
+      )
       .accounts({
         distributor: distributorPublicKey,
         escrowToken: rewardEscrowToken,
@@ -445,7 +474,12 @@ describe("superstream", () => {
     console.log("updated senderTokenAmount after claim is " + senderTokenAmount);
 
     await program.methods
-      .claim(new BN(index), new BN(10), proof)
+      .claim(
+        new BN(index),
+        new BN(10),
+        leaf1,
+        proof.map((p) => toBytes32Array(p)),
+      )
       .accounts({
         distributor: distributorPublicKey,
         escrowToken: rewardEscrowToken,
@@ -488,13 +522,15 @@ describe("superstream", () => {
       .withdraw(new BN(0), name, recipient.publicKey)
       .accounts({
         stream: streamPublicKey,
-        signer: sender.publicKey,
+        signer: recipient.publicKey,
         mint,
         recipientToken,
         escrowToken,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
-      .rpc();
+      .signers([recipient])
+      .rpc()
+      .catch((error) => console.error(error));
 
     recipientTokenAccount = await fetchTokenAccount(recipientToken);
     approximatelyEqualBN(recipientTokenAccount.amount, new BN(1000 + diffOnWithdraw * 10));

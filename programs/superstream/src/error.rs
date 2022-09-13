@@ -137,6 +137,9 @@ pub enum StreamError {
     #[msg("Already Claimed")]
     AlreadyClaimed,
 
+    #[msg("Invalid Merkle leaf")]
+    InvalidMerkleLeaf,
+
     #[msg("Invalid Merkle proof")]
     InvalidMerkleProof,
 

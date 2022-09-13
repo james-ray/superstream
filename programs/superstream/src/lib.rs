@@ -350,7 +350,7 @@ pub mod superstream {
         )
     }
 
-    pub fn claim(ctx: Context<Claim>, index: u64, amount: u64, proof: Vec<[u8; 32]>) -> Result<()> {
+    pub fn claim(ctx: Context<Claim>, index: u64, amount: u64, leaf: [u8; 32], proof: Vec<[u8; 32]>) -> Result<()> {
         //Check claim status
         let claimer = &ctx.accounts.claimer;
         let status = &mut ctx.accounts.status;
@@ -375,6 +375,10 @@ pub mod superstream {
             &amount.to_le_bytes(),
         ]);
         
+        if leaf != node.0 {
+            return Err(StreamError::InvalidMerkleLeaf.into());
+        }
+
         if !utils::verify(proof, distributor.root, node.0) {
             return Err(StreamError::InvalidMerkleProof.into());
         }
