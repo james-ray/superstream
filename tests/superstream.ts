@@ -153,7 +153,7 @@ describe("superstream", () => {
     console.log("recipient.publicKey: " + recipient.publicKey);
     console.log("activityPublicKey: " + activityPublicKey);
     let sig = await program.methods
-      .createActivity(seed, name, new BN(0), new BN(endsAt), new BN(endsAt), new BN(4), new BN(1000), new BN(0))
+      .createActivity(seed, name, new BN(0), new BN(startAt), new BN(endsAt), new BN(4), new BN(1000), new BN(0))
       .accounts({
         activity: activityPublicKey,
         creator: sender.publicKey,
@@ -354,7 +354,7 @@ describe("superstream", () => {
         " minAmount: " +
         activityAccount.minAmount +
         " endsAt: " +
-        streamAccount.endsAt,
+        activityAccount.endsAt,
     );
     senderTokenAccount = await fetchTokenAccount(senderToken);
     senderTokenAmount = senderTokenAccount.amount;
